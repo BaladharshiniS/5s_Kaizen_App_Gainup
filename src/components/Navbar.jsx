@@ -62,12 +62,14 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language Toggle */}
-            <button onClick={toggleLang}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-bold"
-              style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
-              🌐 {localLang === 'en' ? 'EN' : 'தமிழ்'}
-            </button>
+            {/* Language Toggle — only show on New Audit page */}
+            {location.pathname === '/new-audit' && (
+              <button onClick={toggleLang}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-bold"
+                style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                🌐 {localLang === 'en' ? 'EN' : 'தமிழ்'}
+              </button>
+            )}
 
             {pending > 0 && (
               <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer"

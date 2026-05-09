@@ -26,6 +26,70 @@ const PopupAlert = ({ message, onClose }) => (
   ) : null
 )
 
+const CameraModal = ({ onCapture, onClose }) => {
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  const [camError, setCamError] = useState('')
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(stream => {
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.onloadedmetadata = () => setReady(true)
+        }
+      })
+      .catch(() => setCamError('Camera access denied. Use Gallery instead.'))
+    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()) }
+  }, [])
+
+  const shoot = () => {
+    if (!ready) return
+    canvasRef.current.width = videoRef.current.videoWidth
+    canvasRef.current.height = videoRef.current.videoHeight
+    canvasRef.current.getContext('2d').drawImage(videoRef.current, 0, 0)
+    streamRef.current.getTracks().forEach(t => t.stop())
+    onCapture(canvasRef.current.toDataURL('image/jpeg', 0.88))
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black">
+      <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(0,0,0,0.8)' }}>
+        <button onClick={onClose} className="text-white font-bold px-3 py-2 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.15)' }}>✕ Cancel</button>
+        <p className="text-white text-sm font-semibold">📷 Take Photo</p>
+        <div className="w-20" />
+      </div>
+      <div className="flex-1 relative">
+        {camError
+          ? <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+              <span className="text-5xl mb-3">📵</span>
+              <p className="text-white font-bold mb-1">Camera Not Available</p>
+              <p className="text-gray-400 text-sm mb-6">{camError}</p>
+              <button onClick={onClose} className="bg-white text-black font-bold py-3 px-8 rounded-2xl text-sm">Close</button>
+            </div>
+          : <>
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              {!ready && <div className="absolute inset-0 flex items-center justify-center"><p className="text-white text-sm">Starting camera...</p></div>}
+            </>
+        }
+      </div>
+      <canvas ref={canvasRef} className="hidden" />
+      {!camError && (
+        <div className="flex items-center justify-center py-8" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <button onClick={shoot} disabled={!ready}
+            className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center"
+            style={{ opacity: ready ? 1 : 0.4 }}>
+            <div className="w-14 h-14 rounded-full bg-white" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const NewAudit = () => {
   const { user } = useAuth()
   const lang = useLang()
@@ -56,6 +120,8 @@ const NewAudit = () => {
   const [completedLevels, setCompletedLevels] = useState([])
   const [showPrevScores, setShowPrevScores] = useState(false)
   const [prevAudits, setPrevAudits] = useState([])
+  const [activeCamera, setActiveCamera] = useState(null) // key like "1S_0"
+  const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('masterChecklist')
@@ -165,13 +231,11 @@ const NewAudit = () => {
       return
     }
 
-    const confirmed = window.confirm(
-      answered === 0
-        ? '⚠️ No scores entered. Submit anyway?'
-        : `Submit audit?\n${answered}/${totalItems} items scored\nScore: ${getScorePercent()}%`
-    )
-    if (!confirmed) return
+    setShowConfirm(true)
+  }
 
+  const doSubmit = () => {
+    setShowConfirm(false)
     const audit = {
       id: Date.now(),
       area: area === 'Others' ? otherArea : area,
@@ -322,7 +386,7 @@ const NewAudit = () => {
             </div>
           </div>
 
-          {/* Department — filtered by team */}
+          {/* Department -- filtered by team */}
           {teamName && (
             <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">
               <label className="block text-xs font-black text-gray-600 uppercase mb-3">
@@ -413,7 +477,7 @@ const NewAudit = () => {
           ) : (
             <div className="w-full py-4 rounded-2xl text-center text-sm font-bold"
               style={{ background: '#f1f5f9', color: '#94a3b8' }}>
-              👁️ View only — no permission to audit
+              👁️ View only -- no permission to audit
             </div>
           )}
         </div>
@@ -435,7 +499,7 @@ const NewAudit = () => {
                       style={{ background: done ? '#dcfce7' : '#fee2e2' }}>
                       <span>{done ? '✅' : '❌'}</span>
                       <span className="text-xs font-bold" style={{ color: done ? '#16a34a' : '#dc2626' }}>
-                        {s} — {checklist[s]?.label}
+                        {s} -- {checklist[s]?.label}
                       </span>
                       <span className="ml-auto text-xs font-bold" style={{ color: done ? '#16a34a' : '#dc2626' }}>
                         {done ? 'Done' : 'Pending'}
@@ -514,6 +578,32 @@ const NewAudit = () => {
         </div>
 
         <PopupAlert message={alertMsg} onClose={() => setAlertMsg('')} />
+
+        {/* Confirm Submit Popup */}
+        {showConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: 'rgba(0,0,0,0.6)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl">📋</span>
+                <p className="text-base font-black text-gray-800">Submit Audit?</p>
+              </div>
+              <p className="text-sm text-gray-500 mb-1">Score: <span className="font-black" style={{ color: getColor(getScorePercent()) }}>{getScorePercent()}%</span></p>
+              <p className="text-xs text-gray-400 mb-5">{getScoredMarks()} / {getTotalMarks()} marks · {auditLevel} · {area === 'Others' ? otherArea : area}</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowConfirm(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-sm">
+                  Cancel
+                </button>
+                <button onClick={doSubmit}
+                  className="flex-1 text-white py-3 rounded-xl font-bold text-sm"
+                  style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                  Yes, Submit ✅
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {getActiveLevels().map(sLevel => {
@@ -613,16 +703,25 @@ const NewAudit = () => {
                                   <img src={beforePhotos[key]} alt="current" className="w-full h-24 object-cover rounded-xl" />
                                 )}
                                 <button onClick={() => setBeforePhotos(p => { const n = { ...p }; delete n[key]; return n })}
-                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">×</button>
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">x</button>
                               </div>
                             ) : (
-                              <label className="w-full h-16 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:border-blue-400"
-                                style={{ background: '#f8fafc' }}>
-                                <span className="text-base">📷</span>
-                                <span className="text-xs text-gray-400">Camera or Gallery</span>
-                                <input type="file" accept="image/*,video/*" className="hidden"
-                                  onChange={e => handlePhoto(sLevel, idx, e)} />
-                              </label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button type="button"
+                                  onClick={() => setActiveCamera(key)}
+                                  className="h-16 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
+                                  style={{ background: '#eff6ff' }}>
+                                  <span className="text-base">📷</span>
+                                  <span className="text-xs text-blue-600 font-black">Camera</span>
+                                </button>
+                                <label className="h-16 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400"
+                                  style={{ background: '#f8fafc' }}>
+                                  <span className="text-base">🖼️</span>
+                                  <span className="text-xs text-gray-400">Gallery</span>
+                                  <input type="file" accept="image/*,video/*" className="hidden"
+                                    onChange={e => handlePhoto(sLevel, idx, e)} />
+                                </label>
+                              </div>
                             )}
                           </div>
                         )}
@@ -643,6 +742,12 @@ const NewAudit = () => {
           </button>
         )}
       </div>
+
+      {/* ── Real-time Camera Modal ── */}
+      {activeCamera && <CameraModal
+        onCapture={dataUrl => { setBeforePhotos(p => ({ ...p, [activeCamera]: dataUrl })); setActiveCamera(null) }}
+        onClose={() => setActiveCamera(null)}
+      />}
     </div>
   )
 }

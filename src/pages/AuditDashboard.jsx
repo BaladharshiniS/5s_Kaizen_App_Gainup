@@ -330,7 +330,7 @@ const AuditDashboard = () => {
             {filtered.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-4">
                 <p className="text-xs font-black text-gray-600 uppercase mb-1">5S Section Performance</p>
-                <p className="text-xs text-gray-400 mb-3">Average score % for each S across all audits</p>
+                <p className="text-xs text-gray-400 mb-4">Average score % per S across all audits</p>
                 <div className="space-y-3">
                   {sectionData.map((item, index) => {
                     const color = Object.values(S_COLORS)[index]
@@ -345,13 +345,10 @@ const AuditDashboard = () => {
                           <div className="h-3 rounded-full transition-all"
                             style={{ width: `${pct}%`, background: color }}></div>
                         </div>
-                        <div className="flex justify-between text-xs text-gray-300 mt-0.5">
-                          <span>0%</span>
-                          <span className={pct >= 80 ? 'text-green-500 font-bold' : pct >= 60 ? 'text-yellow-500 font-bold' : 'text-red-500 font-bold'}>
-                            {pct >= 80 ? '✅ Good' : pct >= 60 ? '⚠️ Average' : '❌ Needs Work'}
-                          </span>
-                          <span>100%</span>
-                        </div>
+                        <p className="text-xs mt-0.5 text-right font-bold"
+                          style={{ color: pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626' }}>
+                          {pct >= 80 ? '✅ Good' : pct >= 60 ? '⚠️ Average' : '❌ Needs Work'}
+                        </p>
                       </div>
                     )
                   })}

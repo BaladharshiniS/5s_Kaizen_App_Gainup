@@ -49,37 +49,49 @@ const AuditHistory = () => {
         <h1 className="text-xl font-black text-gray-800 mb-4">📊 Audit History</h1>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-sm p-3 mb-4 space-y-2">
-          <select value={filterTeam} onChange={e => { setFilterTeam(e.target.value); setFilterArea('') }}
-            className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
-            <option value="">All Teams</option>
-            {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+        <div className="bg-white rounded-2xl shadow-sm p-3 mb-4">
+          <p className="text-xs font-black text-gray-500 uppercase mb-2">Filters</p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <select value={filterTeam}
+              onChange={e => { setFilterTeam(e.target.value); setFilterArea('') }}
+              className="border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
+              <option value="">All Teams</option>
+              {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={filterLevel}
+              onChange={e => setFilterLevel(e.target.value)}
+              className="border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
+              <option value="">All Levels</option>
+              {S_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
           {filterTeam && (
-            <select value={filterArea} onChange={e => setFilterArea(e.target.value)}
-              className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
-              <option value="">All Departments ({filterTeam})</option>
-              {(TEAMS_DEPARTMENTS[filterTeam] || []).map(a => <option key={a} value={a}>{a}</option>)}
+            <select value={filterArea}
+              onChange={e => setFilterArea(e.target.value)}
+              className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50 mb-2">
+              <option value="">All Depts — {filterTeam}</option>
+              {(TEAMS_DEPARTMENTS[filterTeam] || []).map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
             </select>
           )}
-          
-          <select value={filterAuditor} onChange={e => setFilterAuditor(e.target.value)}
-            className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
+          <select value={filterAuditor}
+            onChange={e => setFilterAuditor(e.target.value)}
+            className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50 mb-2">
             <option value="">All Auditors</option>
             {[...new Set(audits.map(a => a.auditorName).filter(Boolean))].map(name => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)}
-            className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
-            <option value="">All Levels</option>
-            {S_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-          </select>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">{filtered.length} record(s)</span>
-            {(filterArea || filterTeam || filterLevel) && (
-              <button onClick={() => { setFilterArea(''); setFilterTeam(''); setFilterLevel(''); setFilterAuditor('') }}
-                className="text-xs text-red-500 font-bold">Clear ×</button>
+            <span className="text-xs text-gray-400 font-semibold">{filtered.length} record(s)</span>
+            {(filterArea || filterTeam || filterLevel || filterAuditor) && (
+              <button
+                onClick={() => { setFilterArea(''); setFilterTeam(''); setFilterLevel(''); setFilterAuditor('') }}
+                className="text-xs text-red-500 font-bold px-3 py-1 rounded-lg"
+                style={{ background: '#fee2e2' }}>
+                Clear All ×
+              </button>
             )}
           </div>
         </div>
