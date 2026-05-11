@@ -82,7 +82,7 @@ const SubmitKaizen = () => {
     Promise.all(readers).then(results => setMediaFiles(p => [...p, ...results]))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.title) { setAlertMsg('Please enter idea title!'); return }
     if (!form.priority) { setAlertMsg('Please select priority!'); return }
     if (!form.team) { setAlertMsg('Please select team!'); return }

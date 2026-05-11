@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
-import { TEAMS, DEFAULT_CHECKLIST } from '../firebase'
 import { TEAMS, DEFAULT_CHECKLIST, getAudits, getKaizens } from '../firebase'
 
 const MDView = () => {

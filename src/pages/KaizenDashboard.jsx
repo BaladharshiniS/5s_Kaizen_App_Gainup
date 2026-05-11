@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { TEAMS } from '../firebase'
 import { TEAMS, getKaizens } from '../firebase'
 
 const COLORS = ['#1e3a5f', '#f97316', '#0f766e', '#7c3aed', '#b91c1c', '#065f46', '#b45309', '#0369a1', '#be185d']
