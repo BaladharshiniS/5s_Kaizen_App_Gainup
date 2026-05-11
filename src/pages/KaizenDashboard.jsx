@@ -36,10 +36,17 @@ const KaizenDashboard = () => {
     Count: kaizens.filter(k => k.area === area).length,
   }))
 
-  const categoryData = [...new Set(kaizens.map(k => k.category).filter(Boolean))].map(cat => ({
+  const categoryData = [...new Set(kaizens.flatMap(k => {
+    if (Array.isArray(k.categories)) return k.categories
+    if (k.category) return [k.category]
+    return []
+  }).filter(Boolean))].map(cat => ({
     name: cat,
-    value: kaizens.filter(k => k.category === cat).length
-  }))
+    value: kaizens.filter(k =>
+      (Array.isArray(k.categories) && k.categories.includes(cat)) ||
+      k.category === cat
+    ).length
+  })).filter(d => d.value > 0)
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
@@ -102,10 +109,18 @@ const KaizenDashboard = () => {
                     <p className="text-xs font-black text-gray-600 uppercase mb-3">By Category</p>
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
-                        <Pie data={categoryData} cx="50%" cy="50%" outerRadius={70} dataKey="value"
-                          label={({ name, value }) => `${value}`}>
-                          {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                        </Pie>
+                        <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      labelLine={false}>
+                      {categoryData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
                         <Legend formatter={v => <span style={{ fontSize: 9 }}>{v}</span>} />
                         <Tooltip />
                       </PieChart>

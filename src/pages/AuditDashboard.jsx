@@ -115,10 +115,11 @@ const AuditDashboard = () => {
     Score: a.scorePercent || 0,
   }))
 
-  const areaData = AREAS.map(area => {
-    const areaAudits = audits.filter(a => a.area === area)
+  const areaData = [...new Set(filtered.map(a => a.area).filter(Boolean))].map(area => {
+    const areaAudits = filtered.filter(a => a.area === area)
     return {
-      name: area.split(' ')[0],
+      name: area.length > 8 ? area.substring(0, 8) + '..' : area,
+      fullName: area,
       Score: areaAudits.length
         ? Math.round(areaAudits.reduce((s, a) => s + (a.scorePercent || 0), 0) / areaAudits.length)
         : 0,
@@ -240,18 +241,47 @@ const AuditDashboard = () => {
             {/* Score by Department */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl shadow-sm p-4">
-                <p className="text-xs font-black text-gray-600 uppercase mb-3">Score by Department</p>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={areaData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={55} />
-                    <Tooltip />
-                    <Bar dataKey="Score" fill="#1e3a5f" radius={[0, 4, 4, 0]} name="Average" />
-                    <Bar dataKey="Latest" fill="#f97316" radius={[0, 4, 4, 0]} name="Latest" />
-                    <Legend />
-                  </BarChart>
-                </ResponsiveContainer>
+                <p className="text-xs font-black text-gray-600 uppercase mb-1">Score by Department</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  {selectedTeam ? `Team: ${selectedTeam}` : 'All Teams'}
+                </p>
+                {areaData.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400 text-xs">No department data yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {areaData.map(d => (
+                      <div key={d.name}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="font-bold text-gray-700">{d.name}</span>
+                          <div className="flex gap-3">
+                            <span className="text-gray-500">Avg: <span className="font-black" style={{ color: '#1e3a5f' }}>{d.Score}%</span></span>
+                            <span className="text-gray-500">Latest: <span className="font-black" style={{ color: '#f97316' }}>{d.Latest}%</span></span>
+                          </div>
+                        </div>
+                        <div className="w-full rounded-full h-2.5" style={{ background: '#f1f5f9' }}>
+                          <div className="h-2.5 rounded-full"
+                            style={{ width: `${d.Score}%`, background: '#1e3a5f' }}></div>
+                        </div>
+                        <div className="w-full rounded-full h-1.5 mt-0.5" style={{ background: '#f1f5f9' }}>
+                          <div className="h-1.5 rounded-full opacity-70"
+                            style={{ width: `${d.Latest}%`, background: '#f97316' }}></div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex gap-4 mt-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-2 rounded-full" style={{ background: '#1e3a5f' }}></div>
+                        <span className="text-gray-500">Average</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-1.5 rounded-full opacity-70" style={{ background: '#f97316' }}></div>
+                        <span className="text-gray-500">Latest</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Average by S Level */}

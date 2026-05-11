@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { TEAMS, DEFAULT_CHECKLIST, mockUsers, DESIGNATIONS, TEAMS_DEPARTMENTS } from '../firebase'
+import { TEAMS, DEFAULT_CHECKLIST, mockUsers, DESIGNATIONS, TEAMS_DEPARTMENTS, saveAudit, getAudits } from '../firebase'
 import { useLang } from '../App'
 
 const S_LEVELS = ['1S', '2S', '3S', '4S', '5S']
@@ -95,7 +95,7 @@ const NewAudit = () => {
   const lang = useLang()
   const navigate = useNavigate()
 
-  const canPutMarks = user?.role === 'AuditIncharge'
+  const canPutMarks = user?.role === 'AuditIncharge' || user?.role === 'MD'
   const canAudit = user?.role === 'AuditIncharge' || user?.role === 'FiveS_Incharge' || user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'TeamLead'
   const viewOnly = !canAudit
 
@@ -116,12 +116,18 @@ const NewAudit = () => {
   const [submitted, setSubmitted] = useState(false)
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST)
   const [alertMsg, setAlertMsg] = useState('')
+  const [previewImg, setPreviewImg] = useState(null)
   const [showSLevelCheck, setShowSLevelCheck] = useState(false)
   const [completedLevels, setCompletedLevels] = useState([])
   const [showPrevScores, setShowPrevScores] = useState(false)
   const [prevAudits, setPrevAudits] = useState([])
   const [activeCamera, setActiveCamera] = useState(null) // key like "1S_0"
   const [showConfirm, setShowConfirm] = useState(false)
+
+  const [allAudits, setAllAudits] = useState([])
+  useEffect(() => {
+  getAudits().then(setAllAudits).catch(() => setAllAudits([]))
+}, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('masterChecklist')
@@ -145,39 +151,35 @@ const NewAudit = () => {
   }
 
   const checkSLevelCompletion = (level) => {
-    if (!teamName || !area) return true
-    const allAudits = JSON.parse(localStorage.getItem('audits') || '[]')
-    const levelIdx = S_LEVELS.indexOf(level)
-    if (levelIdx === 0) return true
-    const prevLevel = S_LEVELS[levelIdx - 1]
-    const done = allAudits.some(a =>
+  if (!teamName || !area) return true
+  const levelIdx = S_LEVELS.indexOf(level)
+  if (levelIdx === 0) return true
+  const prevLevel = S_LEVELS[levelIdx - 1]
+  return allAudits.some(a =>
+    a.teamName === teamName &&
+    (a.area === area || a.area === otherArea) &&
+    a.auditLevel === prevLevel
+  )
+}
+
+const getCompletedLevels = () => {
+  if (!teamName || !area) return []
+  return S_LEVELS.filter(s =>
+    allAudits.some(a =>
       a.teamName === teamName &&
       (a.area === area || a.area === otherArea) &&
-      a.auditLevel === prevLevel
+      a.auditLevel === s
     )
-    return done
-  }
+  )
+}
 
-  const getCompletedLevels = () => {
-    if (!teamName || !area) return []
-    const allAudits = JSON.parse(localStorage.getItem('audits') || '[]')
-    return S_LEVELS.filter(s =>
-      allAudits.some(a =>
-        a.teamName === teamName &&
-        (a.area === area || a.area === otherArea) &&
-        a.auditLevel === s
-      )
-    )
-  }
-
-  const getPreviousAudits = (level) => {
-    const allAudits = JSON.parse(localStorage.getItem('audits') || '[]')
-    return allAudits.filter(a =>
-      a.teamName === teamName &&
-      (a.area === area || a.area === otherArea) &&
-      a.auditLevel === level
-    ).reverse().slice(0, 3)
-  }
+const getPreviousAudits = (level) => {
+  return allAudits.filter(a =>
+    a.teamName === teamName &&
+    (a.area === area || a.area === otherArea) &&
+    a.auditLevel === level
+  ).slice(0, 3)
+}
 
   const handleLevelSelect = (level) => {
     const done = getCompletedLevels()
@@ -201,7 +203,7 @@ const NewAudit = () => {
         setAuditLevel('1S')
       }
     }
-  }, [area, teamName])
+  }, [area, teamName, allAudits])
 
   const handlePhoto = (sLevel, idx, e) => {
     const file = e.target.files[0]
@@ -234,27 +236,29 @@ const NewAudit = () => {
     setShowConfirm(true)
   }
 
-  const doSubmit = () => {
-    setShowConfirm(false)
-    const audit = {
-      id: Date.now(),
-      area: area === 'Others' ? otherArea : area,
-      auditLevel, teamName,
-      auditorName: finalAuditorName,
-      auditorDesignation: finalDesignation,
-      auditDate, scores, remarks,
-      beforePhotos,
-      scoredMarks: getScoredMarks(),
-      totalMarks: getTotalMarks(),
-      scorePercent: getScorePercent(),
-      submittedBy: user?.name,
-      date: new Date(auditDate).toLocaleDateString(),
-      timestamp: new Date().toISOString(),
-    }
-    const existing = JSON.parse(localStorage.getItem('audits') || '[]')
-    localStorage.setItem('audits', JSON.stringify([...existing, audit]))
-    setSubmitted(true)
+  const doSubmit = async () => {
+  setShowConfirm(false)
+  const audit = {
+    area: area === 'Others' ? otherArea : area,
+    auditLevel, teamName,
+    auditorName: finalAuditorName,
+    auditorDesignation: finalDesignation,
+    auditDate, scores, remarks,
+    beforePhotos: beforePhotos,
+    scoredMarks: getScoredMarks(),
+    totalMarks: getTotalMarks(),
+    scorePercent: getScorePercent(),
+    submittedBy: user?.name,
+    date: new Date(auditDate).toLocaleDateString(),
+    timestamp: new Date().toISOString(),
   }
+  try {
+    await saveAudit(audit)
+    setSubmitted(true)
+  } catch (err) {
+    setAlertMsg('❌ Failed to save. Check your internet connection and try again.')
+  }
+}
 
   const resetForm = () => {
     setStep(1); setArea(''); setOtherArea(''); setAuditLevel('')
@@ -700,10 +704,18 @@ const NewAudit = () => {
                                 {beforePhotos[key].startsWith('data:video') ? (
                                   <video src={beforePhotos[key]} controls className="w-full h-24 rounded-xl" />
                                 ) : (
-                                  <img src={beforePhotos[key]} alt="current" className="w-full h-24 object-cover rounded-xl" />
+                                  <img
+                                    src={beforePhotos[key]}
+                                    alt="current"
+                                    className="w-full h-24 object-cover rounded-xl cursor-pointer"
+                                    onClick={() => setPreviewImg(beforePhotos[key])}
+                                  />
                                 )}
                                 <button onClick={() => setBeforePhotos(p => { const n = { ...p }; delete n[key]; return n })}
-                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">x</button>
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">×</button>
+                                <button
+                                  onClick={() => setPreviewImg(beforePhotos[key])}
+                                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">🔍</button>
                               </div>
                             ) : (
                               <div className="grid grid-cols-2 gap-2">
@@ -733,6 +745,22 @@ const NewAudit = () => {
             )
           })}
         </div>
+        {/* Image Preview Modal */}
+        {previewImg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.9)' }}
+            onClick={() => setPreviewImg(null)}>
+            <div className="relative max-w-full max-h-full p-4">
+              <img src={previewImg} alt="preview"
+                className="max-w-full max-h-screen rounded-xl object-contain"
+                style={{ maxHeight: '80vh' }} />
+              <button
+                onClick={() => setPreviewImg(null)}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white text-gray-800 font-black flex items-center justify-center shadow-lg">×</button>
+              <p className="text-white text-xs text-center mt-2">Tap anywhere to close</p>
+            </div>
+          </div>
+        )}
 
         {canAudit && (
           <button type="button" onClick={handleSubmit}
