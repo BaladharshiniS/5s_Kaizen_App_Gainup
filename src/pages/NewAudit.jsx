@@ -113,7 +113,8 @@ const NewAudit = () => {
   const [scores, setScores] = useState({})
   const [remarks, setRemarks] = useState({})
   const [beforePhotos, setBeforePhotos] = useState({})
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(false) 
+  const [previewMode, setPreviewMode] = useState(false)
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST)
   const [alertMsg, setAlertMsg] = useState('')
   const [previewImg, setPreviewImg] = useState(null)
@@ -274,6 +275,88 @@ const getPreviousAudits = (level) => {
 
   const getColor = s => s >= 80 ? '#16a34a' : s >= 60 ? '#d97706' : '#dc2626'
   const getBg = s => s >= 80 ? '#dcfce7' : s >= 60 ? '#fef9c3' : '#fee2e2'
+
+  if (previewMode) {
+    return (
+    <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
+      <Navbar />
+
+      <div className="p-4 max-w-2xl mx-auto">
+
+        <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
+          <h2 className="text-xl font-black text-gray-800 mb-3">
+            📋 Audit Preview
+          </h2>
+
+          <div className="space-y-2 text-sm">
+            <p><span className="font-black">Department:</span> {area}</p>
+            <p><span className="font-black">Audit Level:</span> {auditLevel}</p>
+            <p><span className="font-black">Team:</span> {teamName}</p>
+            <p><span className="font-black">Auditor:</span> {finalAuditorName}</p>
+            <p><span className="font-black">Score:</span> {getScoredMarks()} / {getTotalMarks()}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+
+          {Object.keys(scores).map(key => {
+
+            const score = scores[key]
+            const remark = remarks[key]
+            const photo = beforePhotos[key]
+
+            if (!score) return null
+
+            return (
+              <div key={key} className="bg-white rounded-2xl shadow-sm p-4">
+
+                <div className="flex justify-between mb-2">
+                  <p className="font-bold text-sm">{key}</p>
+                  <p className="font-black text-blue-700">{score}</p>
+                </div>
+
+                {remark && (
+                  <p className="text-xs text-orange-600 mb-2">
+                    {remark}
+                  </p>
+                )}
+
+                {photo && (
+                  <img
+                    src={photo}
+                    alt=""
+                    className="w-full h-40 object-cover rounded-xl"
+                  />
+                )}
+
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="flex gap-3 mt-4 mb-8">
+
+          <button
+            onClick={() => setPreviewMode(false)}
+            className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black">
+            ← Back
+          </button>
+
+          <button
+            onClick={doSubmit}          
+            className="flex-1 text-white py-4 rounded-2xl font-black"
+            style={{
+              background: 'linear-gradient(135deg, #1e3a5f, #1e40af)'
+            }}>
+            Confirm Submit ✅
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  )
+}
 
   if (submitted) {
     const pct = getScorePercent()
@@ -763,7 +846,7 @@ const getPreviousAudits = (level) => {
         )}
 
         {canAudit && (
-          <button type="button" onClick={handleSubmit}
+          <button type="button" onClick={() => setPreviewMode(true)}
             className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg mt-4 mb-8"
             style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
             Submit Audit ✅
