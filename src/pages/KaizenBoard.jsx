@@ -74,7 +74,10 @@ const KaizenBoard = () => {
     reader.readAsDataURL(file)
   }
 
-  const updateStage = (id, newStage) => {
+  const updatedItem = updated.find(k => k.id === id)
+if (updatedItem?.id) {
+  updateKaizen(updatedItem.id, updatedItem).catch(err => console.error('Update failed:', err))
+}
     setMoveError('')
     if (!proofText && !proofPhoto) {
       setMoveError('Please add proof (description or photo) before moving!')

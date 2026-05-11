@@ -75,9 +75,13 @@ export const listenKaizens = (callback) => {
 }
 
 // Update a kaizen (for status changes, approvals etc)
-export const updateKaizen = async (id, updates) => {
-  const kaizenRef = ref(db, `kaizens/${id}`)
-  await update(kaizenRef, updates)
+export const updateKaizen = async (firebaseKey, updates) => {
+  try {
+    const kaizenRef = ref(db, `kaizens/${firebaseKey}`)
+    await update(kaizenRef, updates)
+  } catch (err) {
+    console.error('updateKaizen error:', err)
+  }
 }
 
 // Delete an audit
