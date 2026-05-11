@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TEAMS, getKaizens } from '../firebase'
 
 const COLORS = ['#1e3a5f', '#f97316', '#0f766e', '#7c3aed', '#b91c1c', '#065f46', '#b45309', '#0369a1', '#be185d']
-const STAGES = ['Submitted', 'Review', 'Approved', 'Implement', 'Verify', 'Closed']
+const STAGES = ['Submitted', 'Reviewing', 'Approval', 'Waiting to Implement', 'Wanting to Verify', 'Closed']
 
 const KaizenDashboard = () => {
   const [kaizens, setKaizens] = useState([])
@@ -204,10 +204,10 @@ const KaizenDashboard = () => {
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Department</p>
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={areaData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={55} />
+                    <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                       <Tooltip />
                       <Bar dataKey="Count" fill="#f97316" radius={[0, 4, 4, 0]} />
                     </BarChart>

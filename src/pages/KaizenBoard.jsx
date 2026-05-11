@@ -84,7 +84,6 @@ const KaizenBoard = () => {
       setMoveError('Please select handler name!')
       return
     }
-    if (!window.confirm(`Move to "${newStage}"?\nHandler: ${finalHandler}\n\nClick OK to confirm.`)) return
 
     const updated = kaizens.map(k => k.id === id ? {
       ...k,
@@ -105,7 +104,8 @@ const KaizenBoard = () => {
     } : k)
 
     setKaizens(updated)
-    updateKaizen(id, updated.find(k => k.id === id))
+    const updatedItem = updated.find(k => k.id === id)
+    updateKaizen(updatedItem.id, updatedItem)
     setSelected(null)
     setSaving(''); setComment(''); setHandlerName('')
     setHandlerDesignation(''); setProofText('')
