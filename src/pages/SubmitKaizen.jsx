@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { KAIZEN_CATEGORIES, KAIZEN_PROBLEM_TYPES, TEAMS, TEAMS_DEPARTMENTS, TEAMS_MEMBERS } from '../firebase'
+import { KAIZEN_CATEGORIES, KAIZEN_PROBLEM_TYPES, TEAMS, TEAMS_DEPARTMENTS, TEAMS_MEMBERS, saveKaizen } from '../firebase'
 
 const PopupAlert = ({ message, onClose }) => (
   message ? (
@@ -107,8 +107,12 @@ const SubmitKaizen = () => {
       savingsAchieved: 0,
       comments: [],
     }
-    const existing = JSON.parse(localStorage.getItem('kaizens') || '[]')
-    localStorage.setItem('kaizens', JSON.stringify([...existing, idea]))
+    try {
+  await saveKaizen(idea)
+  setSubmitted(true)
+} catch (err) {
+  alert('❌ Failed to save. Check internet connection.')
+}
     setSubmitted(true)
   }
 

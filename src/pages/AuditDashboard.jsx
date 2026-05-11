@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { AREAS, TEAMS, DEFAULT_CHECKLIST, TEAMS_DEPARTMENTS } from '../firebase'
+import { AREAS, TEAMS, DEFAULT_CHECKLIST, TEAMS_DEPARTMENTS, getAudits } from '../firebase'
 
 const S_LEVELS = ['1S', '2S', '3S', '4S', '5S']
 
@@ -98,7 +98,7 @@ const AuditDashboard = () => {
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST)
 
   useEffect(() => {
-    setAudits(JSON.parse(localStorage.getItem('audits') || '[]'))
+    getAudits().then(data => setAudits(data)).catch(() => setAudits([]))
     const saved = localStorage.getItem('masterChecklist')
     if (saved) setChecklist(JSON.parse(saved))
   }, [])

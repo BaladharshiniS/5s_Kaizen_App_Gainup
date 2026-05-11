@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
+import { getAudits, getKaizens } from '../firebase'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -11,8 +12,7 @@ const Dashboard = () => {
   const [pendingKaizens, setPendingKaizens] = useState([])
 
   useEffect(() => {
-    const audits = JSON.parse(localStorage.getItem('audits') || '[]')
-    const kaizens = JSON.parse(localStorage.getItem('kaizens') || '[]')
+  Promise.all([getAudits(), getKaizens()]).then(([audits, kaizens]) => {
     const avgScore = audits.length ? Math.round(audits.reduce((s, a) => s + (a.scorePercent || 0), 0) / audits.length) : 0
     setStats({
       audits: audits.length, avgScore,
@@ -21,22 +21,23 @@ const Dashboard = () => {
       savings: kaizens.reduce((s, k) => s + (k.savingsAchieved || 0), 0),
       implemented: kaizens.filter(k => k.stage === 'Closed').length,
     })
-    setRecentAudits([...audits].reverse().slice(0, 3))
+    setRecentAudits(audits.slice(0, 3))
     setPendingKaizens(kaizens.filter(k => {
       if (user?.role === 'Admin') return k.stage === 'Review'
       if (user?.role === 'Auditor') return k.stage === 'Submitted'
       return false
     }).slice(0, 3))
-  }, [user])
+  }).catch(() => {})
+}, [user])
 
   const allModules = [
-  { title: 'New 5S Audit', emoji: '📋', desc: 'Conduct section-wise audit with scoring', path: '/new-audit', gradient: 'linear-gradient(135deg, #1e3a5f, #1e40af)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Audit History', emoji: '📊', desc: 'View all past audit records by area', path: '/audit-history', gradient: 'linear-gradient(135deg, #065f46, #0f766e)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Audit Trends', emoji: '📈', desc: 'Compliance trends and charts over time', path: '/audit-dashboard', gradient: 'linear-gradient(135deg, #4c1d95, #7c3aed)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Submit Idea', emoji: '💡', desc: 'Submit improvement idea for review', path: '/submit-kaizen', gradient: 'linear-gradient(135deg, #92400e, #b45309)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Kaizen Board', emoji: '📌', desc: 'Track ideas through implementation pipeline', path: '/kaizen-board', gradient: 'linear-gradient(135deg, #9a3412, #b91c1c)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Kaizen Stats', emoji: '🏆', desc: 'Savings achieved and performance metrics', path: '/kaizen-dashboard', gradient: 'linear-gradient(135deg, #064e3b, #065f46)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-  { title: 'Organogram', emoji: '🏢', desc: 'View team structure and members', path: '/organogram', gradient: 'linear-gradient(135deg, #1e3a5f, #0369a1)', roles: ['MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'New 5S Audit', emoji: '📋', desc: 'Conduct section-wise audit with scoring', path: '/new-audit', gradient: 'linear-gradient(135deg, #1e3a5f, #1e40af)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Audit History', emoji: '📊', desc: 'View all past audit records by area', path: '/audit-history', gradient: 'linear-gradient(135deg, #065f46, #0f766e)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Audit Trends', emoji: '📈', desc: 'Compliance trends and charts over time', path: '/audit-dashboard', gradient: 'linear-gradient(135deg, #4c1d95, #7c3aed)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Submit Idea', emoji: '💡', desc: 'Submit improvement idea for review', path: '/submit-kaizen', gradient: 'linear-gradient(135deg, #92400e, #b45309)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Kaizen Board', emoji: '📌', desc: 'Track ideas through implementation pipeline', path: '/kaizen-board', gradient: 'linear-gradient(135deg, #9a3412, #b91c1c)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Kaizen Stats', emoji: '🏆', desc: 'Savings achieved and performance metrics', path: '/kaizen-dashboard', gradient: 'linear-gradient(135deg, #064e3b, #065f46)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
+  { title: 'Organogram', emoji: '🏢', desc: 'View team structure and members', path: '/organogram', gradient: 'linear-gradient(135deg, #1e3a5f, #0369a1)', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
   { title: 'MD View', emoji: '👔', desc: 'Executive overview and reports', path: '/md-view', gradient: 'linear-gradient(135deg, #0f172a, #1e3a5f)', roles: ['MD'] },
   { title: 'Master Setup', emoji: '⚙️', desc: 'Manage checklist items', path: '/master-setup', gradient: 'linear-gradient(135deg, #7c3aed, #6d28d9)', roles: ['MD', 'AuditIncharge'] },
 ]

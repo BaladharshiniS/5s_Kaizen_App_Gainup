@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { mockUsers, DESIGNATIONS, KAIZEN_STAGES } from '../firebase'
+import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, getKaizens, updateKaizen } from '../firebase'
 
 const STAGE_STYLE = {
   'Submitted': { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
@@ -50,8 +50,7 @@ const KaizenBoard = () => {
   const [moveError, setMoveError] = useState('')
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem('kaizens') || '[]')
-    // Migrate old stage names
+  getKaizens().then(data => {
     const migrated = data.map(k => ({
       ...k,
       stage: k.stage === 'Review' ? 'Reviewing'
@@ -61,7 +60,8 @@ const KaizenBoard = () => {
         : k.stage
     }))
     setKaizens(migrated)
-  }, [])
+  }).catch(() => setKaizens([]))
+}, [])
 
   const finalHandler = isOtherHandler ? customHandlerName : handlerName
   const finalHandlerDesig = isOtherHandler ? customHandlerDesig : handlerDesignation
@@ -105,7 +105,7 @@ const KaizenBoard = () => {
     } : k)
 
     setKaizens(updated)
-    localStorage.setItem('kaizens', JSON.stringify(updated))
+    updateKaizen(id, updated.find(k => k.id === id))
     setSelected(null)
     setSaving(''); setComment(''); setHandlerName('')
     setHandlerDesignation(''); setProofText('')

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { TEAMS, DEFAULT_CHECKLIST } from '../firebase'
+import { TEAMS, DEFAULT_CHECKLIST, getAudits, getKaizens } from '../firebase'
 
 const MDView = () => {
   const [audits, setAudits] = useState([])
@@ -10,8 +11,8 @@ const MDView = () => {
   const [selectedAudit, setSelectedAudit] = useState(null)
 
   useEffect(() => {
-    setAudits([...JSON.parse(localStorage.getItem('audits') || '[]')].reverse())
-    setKaizens(JSON.parse(localStorage.getItem('kaizens') || '[]'))
+    getAudits().then(data => setAudits(data)).catch(() => setAudits([]))
+    getKaizens().then(data => setKaizens(data)).catch(() => setKaizens([]))
     const saved = localStorage.getItem('masterChecklist')
     if (saved) setChecklist(JSON.parse(saved))
   }, [])
