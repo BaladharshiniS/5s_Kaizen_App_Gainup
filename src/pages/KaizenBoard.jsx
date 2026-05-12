@@ -155,45 +155,6 @@ const KaizenBoard = () => {
   }
 }
 
-
-    if (!proofText && !proofPhoto) {
-      setMoveError('Please add proof (description or photo) before moving!')
-      return
-    }
-    if (!finalHandler) {
-      setMoveError('Please select handler name!')
-      return
-    }
-
-    const updated = kaizens.map(k => k.id === id ? {
-      ...k,
-      stage: newStage,
-      timestamps: { ...k.timestamps, [newStage]: new Date().toLocaleDateString() },
-      handlers: { ...k.handlers, [newStage]: `${finalHandler} (${finalHandlerDesig})` },
-      savingsAchieved: newStage === 'Closed' && saving ? Number(saving) : k.savingsAchieved,
-      incentiveGiven: newStage === 'Closed' && incentive ? incentive : k.incentiveGiven,
-      comments: [...(k.comments || []), {
-        stage: newStage,
-        text: comment || proofText,
-        proof: proofText,
-        proofPhoto,
-        by: finalHandler,
-        designation: finalHandlerDesig,
-        date: new Date().toLocaleDateString()
-      }],
-    } : k)
-
-    setKaizens(updated)
-    const updatedItem = updated.find(k => k.id === id)
-    updateKaizen(updatedItem.id, updatedItem)
-    setSelected(null)
-    setSaving(''); setComment(''); setHandlerName('')
-    setHandlerDesignation(''); setProofText('')
-    setProofPhoto(null); setMoveError('')
-    setIsOtherHandler(false); setCustomHandlerName('')
-    setCustomHandlerDesig(''); setIncentive('')
-  }
-
   const getNext = stage => {
     const i = KAIZEN_STAGES.indexOf(stage)
     return i < KAIZEN_STAGES.length - 1 ? KAIZEN_STAGES[i + 1] : null
