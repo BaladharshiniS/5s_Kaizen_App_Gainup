@@ -226,7 +226,7 @@ const getPreviousAudits = (level) => {
     if (!teamName) { setAlertMsg('Please select a team!'); return }
     if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
 
-    const totalItems = getActiveLevels().reduce((sum, s) => sum + checklist[s].items.length, 0)
+    const totalItems = getActiveLevels().reduce((sum, s) => sum + checklist?.[s]?.items || [].length, 0)
     const answered = Object.keys(scores).filter(k => Number(scores[k]) > 0).length
 
     if (canPutMarks && answered === 0) {

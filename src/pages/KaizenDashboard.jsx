@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { TEAMS, getKaizens } from '../firebase'
+import { TEAMS, listenKaizens } from '../firebase'
 
 const COLORS = ['#1e3a5f', '#f97316', '#0f766e', '#7c3aed', '#b91c1c', '#065f46', '#b45309', '#0369a1', '#be185d']
 const STAGES = ['Submitted', 'Reviewing', 'Approval', 'Waiting to Implement', 'Wanting to Verify', 'Closed']
@@ -9,12 +9,14 @@ const STAGES = ['Submitted', 'Reviewing', 'Approval', 'Waiting to Implement', 'W
 const KaizenDashboard = () => {
   const [kaizens, setKaizens] = useState([])
   const [tab, setTab] = useState('overview')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     getKaizens().then(data => setKaizens(data)).catch(() => setKaizens([]))
   }, [])
 
-  const totalSavings = kaizens.reduce((s, k) => s + (k.savingsAchieved || 0), 0)
+  const totalSavings = kaizens.reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0)
   const totalEstimated = kaizens.reduce((s, k) => s + (Number(k.estimatedSaving) || 0), 0)
   const closed = kaizens.filter(k => k.stage === 'Closed').length
   const pending = kaizens.filter(k => k.stage !== 'Closed').length
@@ -28,7 +30,7 @@ const KaizenDashboard = () => {
     name: team.split(' ')[0],
     Ideas: kaizens.filter(k => k.submittedTeam === team).length,
     Implemented: kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length,
-    Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (k.savingsAchieved || 0), 0),
+    Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0),
   })).filter(t => t.Ideas > 0)
 
   const areaData = [...new Set(kaizens.map(k => k.area).filter(Boolean))].map(area => ({
@@ -48,10 +50,27 @@ const KaizenDashboard = () => {
     ).length
   })).filter(d => d.value > 0)
 
+  if (loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100">
+      <div className="bg-white px-6 py-4 rounded-2xl shadow-sm">
+        <p className="text-sm font-bold text-slate-600">
+          Loading dashboard...
+        </p>
+      </div>
+    </div>
+  )
+}
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
       <Navbar />
       <div className="p-4 max-w-5xl mx-auto">
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold">
+        {error}
+      </div>
+      )}
         <h1 className="text-xl font-black text-gray-800 mb-4">🏆 Kaizen Dashboard</h1>
 
         {/* Stats */}
@@ -114,9 +133,8 @@ const KaizenDashboard = () => {
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                      labelLine={false}>
+                      dataKey="value">                     
+                      labelLine={false}
                       {categoryData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
@@ -183,7 +201,7 @@ const KaizenDashboard = () => {
                       {TEAMS.map(team => {
                         const ideas = kaizens.filter(k => k.submittedTeam === team).length
                         const done = kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length
-                        const savings = kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (k.savingsAchieved || 0), 0)
+                        const savings = kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0)
                         return (
                           <tr key={team} className="border-t border-gray-50 hover:bg-gray-50">
                             <td className="px-3 py-2 font-bold text-gray-800">{team}</td>
@@ -238,7 +256,7 @@ const KaizenDashboard = () => {
                               style={{ background: '#1e3a5f', fontSize: '10px' }}>{k.stage}</span>
                           </td>
                           <td className="px-3 py-2 text-blue-700 font-bold">₹{k.estimatedSaving || 0}</td>
-                          <td className="px-3 py-2 text-green-600 font-bold">₹{k.savingsAchieved || 0}</td>
+                          <td className="px-3 py-2 text-green-600 font-bold">₹{number(k.savingsAchieved) || 0}</td>
                         </tr>
                       ))}
                     </tbody>

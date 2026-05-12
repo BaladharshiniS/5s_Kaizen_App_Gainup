@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
 import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, getKaizens, updateKaizen } from '../firebase'
+import { TEAMS, listenKaizens } from '../firebase'
 
 const STAGE_STYLE = {
   'Submitted': { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
@@ -50,7 +51,7 @@ const KaizenBoard = () => {
   const [moveError, setMoveError] = useState('')
 
   useEffect(() => {
-  getKaizens().then(data => {
+  const unsubscribe = listenKaizens((data) => {
     const migrated = data.map(k => ({
       ...k,
       stage: k.stage === 'Review' ? 'Reviewing'
@@ -59,10 +60,12 @@ const KaizenBoard = () => {
         : k.stage === 'Verify' ? 'Wanting to Verify'
         : k.stage
     }))
-    setKaizens(migrated)
-  }).catch(() => setKaizens([]))
-}, [])
 
+    setKaizens(migrated)
+  })
+
+  return () => unsubscribe()
+}, [])
   const finalHandler = isOtherHandler ? customHandlerName : handlerName
   const finalHandlerDesig = isOtherHandler ? customHandlerDesig : handlerDesignation
 
@@ -74,11 +77,85 @@ const KaizenBoard = () => {
     reader.readAsDataURL(file)
   }
 
-  const updatedItem = updated.find(k => k.id === id)
-if (updatedItem?.id) {
-  updateKaizen(updatedItem.id, updatedItem).catch(err => console.error('Update failed:', err))
-}
+  const updateStage = async (id, newStage) => {
+  setMoveError('')
+
+  if (!proofText && !proofPhoto) {
+    setMoveError('Please add proof (description or photo) before moving!')
+    return
+  }
+
+  if (!finalHandler) {
+    setMoveError('Please select handler name!')
+    return
+  }
+
+  try {
+    const updated = kaizens.map(k =>
+      k.id === id
+        ? {
+            ...k,
+            stage: newStage,
+            timestamps: {
+              ...k.timestamps,
+              [newStage]: new Date().toLocaleDateString()
+            },
+            handlers: {
+              ...k.handlers,
+              [newStage]: `${finalHandler} (${finalHandlerDesig})`
+            },
+            savingsAchieved:
+              newStage === 'Closed' && saving
+                ? Number(saving)
+                : k.savingsAchieved,
+            incentiveGiven:
+              newStage === 'Closed' && incentive
+                ? incentive
+                : k.incentiveGiven,
+            comments: [
+              ...(k.comments || []),
+              {
+                stage: newStage,
+                text: comment || proofText,
+                proof: proofText,
+                proofPhoto,
+                by: finalHandler,
+                designation: finalHandlerDesig,
+                date: new Date().toLocaleDateString()
+              }
+            ]
+          }
+        : k
+    )
+
+    setKaizens(updated)
+
+    const updatedItem = updated.find(k => k.id === id)
+
+    if (updatedItem) {
+      await updateKaizen(updatedItem.id, updatedItem)
+    }
+
+    setSelected(updatedItem)
+
+    setSaving('')
+    setComment('')
+    setHandlerName('')
+    setHandlerDesignation('')
+    setProofText('')
+    setProofPhoto(null)
     setMoveError('')
+    setIsOtherHandler(false)
+    setCustomHandlerName('')
+    setCustomHandlerDesig('')
+    setIncentive('')
+  } catch (err) {
+    console.error('Update failed:', err)
+    setMoveError('Failed to update kaizen stage')
+  }
+}
+
+
     if (!proofText && !proofPhoto) {
       setMoveError('Please add proof (description or photo) before moving!')
       return
