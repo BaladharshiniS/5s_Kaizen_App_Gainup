@@ -41,7 +41,10 @@ export const listenAudits = (callback) => {
   return onValue(auditsRef, (snapshot) => {
     if (!snapshot.exists()) { callback([]); return }
     const data = snapshot.val()
-    const list = Object.values(data).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    const list = Object.values(data).sort((a, b) => {
+  if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp)
+  return 0
+})
     callback(list)
   })
 }

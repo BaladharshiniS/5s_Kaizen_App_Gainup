@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, getKaizens, updateKaizen } from '../firebase'
-import { TEAMS, listenKaizens } from '../firebase'
+import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, updateKaizen, listenKaizens } from '../firebase'
 
 const STAGE_STYLE = {
   'Submitted': { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
@@ -128,15 +127,13 @@ const KaizenBoard = () => {
         : k
     )
 
-    setKaizens(updated)
-
     const updatedItem = updated.find(k => k.id === id)
 
     if (updatedItem) {
-      await updateKaizen(updatedItem.id, updatedItem)
+    await updateKaizen(updatedItem.id, updatedItem)
     }
 
-    setSelected(updatedItem)
+    setSelected(null)
 
     setSaving('')
     setComment('')
