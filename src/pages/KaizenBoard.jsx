@@ -90,8 +90,9 @@ useEffect(() => {
   try {
     const updatedItem = kaizens.find(k => k.id === id)
     if (!updatedItem) return
+    const cleanItem = JSON.parse(JSON.stringify(updatedItem, (key, val) => val === undefined ? null : val))
     const newData = {
-      ...updatedItem,
+      ...cleanItem,
       stage: newStage,
       timestamps: { ...updatedItem.timestamps, [newStage]: new Date().toLocaleDateString() },
       handlers: { ...updatedItem.handlers, [newStage]: `${finalHandler} (${finalHandlerDesig})` },
