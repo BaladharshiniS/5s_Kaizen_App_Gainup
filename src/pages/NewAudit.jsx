@@ -255,6 +255,7 @@ const getPreviousAudits = (level) => {
   }
   try {
     await saveAudit(audit)
+    setPreviewMode(false)
     setSubmitted(true)
   } catch (err) {
     setAlertMsg('❌ Failed to save. Check your internet connection and try again.')
