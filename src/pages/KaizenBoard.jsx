@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, updateKaizen, listenKaizens } from '../firebase'
+import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, updateKaizen, getKaizens } from '../firebase'
 
 const STAGE_STYLE = {
   'Submitted': { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
@@ -48,23 +48,23 @@ const KaizenBoard = () => {
   const [filterTeam, setFilterTeam] = useState('')
   const [view, setView] = useState('table')
   const [moveError, setMoveError] = useState('')
-  const [isUpdating, setIsUpdating] = useState(false)
 
-  useEffect(() => {
-  const unsubscribe = listenKaizens((data) => {
-    if (isUpdating) return  // ← skip update while saving
-    const migrated = data.map(k => ({
-      ...k,
-      stage: k.stage === 'Review' ? 'Reviewing'
-        : k.stage === 'Approved' ? 'Approval'
-        : k.stage === 'Implement' ? 'Waiting to Implement'
-        : k.stage === 'Verify' ? 'Wanting to Verify'
-        : k.stage
-    }))
-    setKaizens(migrated)
-    })
-    return () => unsubscribe()
-  }, [isUpdating])
+  const loadKaizens = async () => {
+  const data = await getKaizens()
+  const migrated = data.map(k => ({
+    ...k,
+    stage: k.stage === 'Review' ? 'Reviewing'
+      : k.stage === 'Approved' ? 'Approval'
+      : k.stage === 'Implement' ? 'Waiting to Implement'
+      : k.stage === 'Verify' ? 'Wanting to Verify'
+      : k.stage
+  }))
+  setKaizens(migrated)
+}
+
+useEffect(() => {
+  loadKaizens()
+}, [])
 
   const finalHandler = isOtherHandler ? customHandlerName : handlerName
   const finalHandlerDesig = isOtherHandler ? customHandlerDesig : handlerDesignation
@@ -79,23 +79,17 @@ const KaizenBoard = () => {
 
   const updateStage = async (id, newStage) => {
   setMoveError('')
-
   if (!proofText && !proofPhoto) {
     setMoveError('Please add proof (description or photo) before moving!')
     return
   }
-
   if (!finalHandler) {
     setMoveError('Please select handler name!')
     return
   }
-
-  setIsUpdating(true)
-
   try {
     const updatedItem = kaizens.find(k => k.id === id)
     if (!updatedItem) return
-
     const newData = {
       ...updatedItem,
       stage: newStage,
@@ -113,22 +107,17 @@ const KaizenBoard = () => {
         date: new Date().toLocaleDateString()
       }]
     }
-
-    setKaizens(prev => prev.map(k => k.id === id ? newData : k))
     await updateKaizen(newData.id, newData)
-
+    await loadKaizens()
     setSelected(null)
     setSaving(''); setComment(''); setHandlerName('')
     setHandlerDesignation(''); setProofText('')
     setProofPhoto(null); setMoveError('')
     setIsOtherHandler(false); setCustomHandlerName('')
     setCustomHandlerDesig(''); setIncentive('')
-
   } catch (err) {
     console.error('Update failed:', err)
     setMoveError('Failed to update. Check internet connection.')
-  } finally {
-    setTimeout(() => setIsUpdating(false), 2000)
   }
 }
 
