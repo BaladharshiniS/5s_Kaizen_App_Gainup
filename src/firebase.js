@@ -81,7 +81,7 @@ export const listenKaizens = (callback) => {
 export const updateKaizen = async (firebaseKey, updates) => {
   try {
     const kaizenRef = ref(db, `kaizens/${firebaseKey}`)
-    await update(kaizenRef, updates)
+    await set(kaizenRef, updates)
   } catch (err) {
     console.error('updateKaizen error:', err)
   }

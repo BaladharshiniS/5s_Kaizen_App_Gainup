@@ -48,9 +48,11 @@ const KaizenBoard = () => {
   const [filterTeam, setFilterTeam] = useState('')
   const [view, setView] = useState('table')
   const [moveError, setMoveError] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
   const unsubscribe = listenKaizens((data) => {
+    if (isUpdating) return  // ← skip update while saving
     const migrated = data.map(k => ({
       ...k,
       stage: k.stage === 'Review' ? 'Reviewing'
@@ -59,12 +61,11 @@ const KaizenBoard = () => {
         : k.stage === 'Verify' ? 'Wanting to Verify'
         : k.stage
     }))
-
     setKaizens(migrated)
-  })
+    })
+    return () => unsubscribe()
+  }, [isUpdating])
 
-  return () => unsubscribe()
-}, [])
   const finalHandler = isOtherHandler ? customHandlerName : handlerName
   const finalHandlerDesig = isOtherHandler ? customHandlerDesig : handlerDesignation
 
@@ -89,66 +90,45 @@ const KaizenBoard = () => {
     return
   }
 
+  setIsUpdating(true)
+
   try {
-    const updated = kaizens.map(k =>
-      k.id === id
-        ? {
-            ...k,
-            stage: newStage,
-            timestamps: {
-              ...k.timestamps,
-              [newStage]: new Date().toLocaleDateString()
-            },
-            handlers: {
-              ...k.handlers,
-              [newStage]: `${finalHandler} (${finalHandlerDesig})`
-            },
-            savingsAchieved:
-              newStage === 'Closed' && saving
-                ? Number(saving)
-                : k.savingsAchieved,
-            incentiveGiven:
-              newStage === 'Closed' && incentive
-                ? incentive
-                : k.incentiveGiven,
-            comments: [
-              ...(k.comments || []),
-              {
-                stage: newStage,
-                text: comment || proofText,
-                proof: proofText,
-                proofPhoto,
-                by: finalHandler,
-                designation: finalHandlerDesig,
-                date: new Date().toLocaleDateString()
-              }
-            ]
-          }
-        : k
-    )
+    const updatedItem = kaizens.find(k => k.id === id)
+    if (!updatedItem) return
 
-    const updatedItem = updated.find(k => k.id === id)
-
-    if (updatedItem) {
-    await updateKaizen(updatedItem.id, updatedItem)
+    const newData = {
+      ...updatedItem,
+      stage: newStage,
+      timestamps: { ...updatedItem.timestamps, [newStage]: new Date().toLocaleDateString() },
+      handlers: { ...updatedItem.handlers, [newStage]: `${finalHandler} (${finalHandlerDesig})` },
+      savingsAchieved: newStage === 'Closed' && saving ? Number(saving) : updatedItem.savingsAchieved,
+      incentiveGiven: newStage === 'Closed' && incentive ? incentive : updatedItem.incentiveGiven,
+      comments: [...(updatedItem.comments || []), {
+        stage: newStage,
+        text: comment || proofText,
+        proof: proofText,
+        proofPhoto,
+        by: finalHandler,
+        designation: finalHandlerDesig,
+        date: new Date().toLocaleDateString()
+      }]
     }
 
-    setSelected(null)
+    setKaizens(prev => prev.map(k => k.id === id ? newData : k))
+    await updateKaizen(newData.id, newData)
 
-    setSaving('')
-    setComment('')
-    setHandlerName('')
-    setHandlerDesignation('')
-    setProofText('')
-    setProofPhoto(null)
-    setMoveError('')
-    setIsOtherHandler(false)
-    setCustomHandlerName('')
-    setCustomHandlerDesig('')
-    setIncentive('')
+    setSelected(null)
+    setSaving(''); setComment(''); setHandlerName('')
+    setHandlerDesignation(''); setProofText('')
+    setProofPhoto(null); setMoveError('')
+    setIsOtherHandler(false); setCustomHandlerName('')
+    setCustomHandlerDesig(''); setIncentive('')
+
   } catch (err) {
     console.error('Update failed:', err)
-    setMoveError('Failed to update kaizen stage')
+    setMoveError('Failed to update. Check internet connection.')
+  } finally {
+    setTimeout(() => setIsUpdating(false), 2000)
   }
 }
 
