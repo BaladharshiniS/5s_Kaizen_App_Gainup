@@ -81,7 +81,8 @@ export const listenKaizens = (callback) => {
 export const updateKaizen = async (firebaseKey, updates) => {
   try {
     const kaizenRef = ref(db, `kaizens/${firebaseKey}`)
-    await set(kaizenRef, updates)
+    const clean = JSON.parse(JSON.stringify(updates, (k, v) => v === undefined ? null : v))
+    await set(kaizenRef, clean)
   } catch (err) {
     console.error('updateKaizen error:', err)
   }
