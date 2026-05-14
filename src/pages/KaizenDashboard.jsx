@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { TEAMS, listenKaizens } from '../firebase'
+import { TEAMS, getKaizens } from '../firebase'
 
 const COLORS = ['#1e3a5f', '#f97316', '#0f766e', '#7c3aed', '#b91c1c', '#065f46', '#b45309', '#0369a1', '#be185d']
 const STAGES = ['Submitted', 'Reviewing', 'Approval', 'Waiting to Implement', 'Wanting to Verify', 'Closed']
@@ -13,10 +13,12 @@ const KaizenDashboard = () => {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getKaizens().then(data => setKaizens(data)).catch(() => setKaizens([]))
-  }, [])
+  getKaizens()
+    .then(data => { setKaizens(data); setLoading(false) })
+    .catch(() => { setKaizens([]); setLoading(false) })
+}, [])
 
-  const totalSavings = kaizens.reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0)
+  const totalSavings = kaizens.reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0)
   const totalEstimated = kaizens.reduce((s, k) => s + (Number(k.estimatedSaving) || 0), 0)
   const closed = kaizens.filter(k => k.stage === 'Closed').length
   const pending = kaizens.filter(k => k.stage !== 'Closed').length
@@ -30,7 +32,7 @@ const KaizenDashboard = () => {
     name: team.split(' ')[0],
     Ideas: kaizens.filter(k => k.submittedTeam === team).length,
     Implemented: kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length,
-    Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0),
+    Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0),
   })).filter(t => t.Ideas > 0)
 
   const areaData = [...new Set(kaizens.map(k => k.area).filter(Boolean))].map(area => ({
@@ -128,17 +130,17 @@ const KaizenDashboard = () => {
                     <p className="text-xs font-black text-gray-600 uppercase mb-3">By Category</p>
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
-                        <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value">                     
-                      labelLine={false}
-                      {categoryData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        labelLine={false}>
+                        {categoryData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
                         <Legend formatter={v => <span style={{ fontSize: 9 }}>{v}</span>} />
                         <Tooltip />
                       </PieChart>
@@ -201,7 +203,7 @@ const KaizenDashboard = () => {
                       {TEAMS.map(team => {
                         const ideas = kaizens.filter(k => k.submittedTeam === team).length
                         const done = kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length
-                        const savings = kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (number(k.savingsAchieved) || 0), 0)
+                        const savings = kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0)
                         return (
                           <tr key={team} className="border-t border-gray-50 hover:bg-gray-50">
                             <td className="px-3 py-2 font-bold text-gray-800">{team}</td>
@@ -224,7 +226,7 @@ const KaizenDashboard = () => {
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <XAxis type="Number" allowDecimals={false} tick={{ fontSize: 10 }} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                       <Tooltip />
                       <Bar dataKey="Count" fill="#f97316" radius={[0, 4, 4, 0]} />
@@ -256,7 +258,7 @@ const KaizenDashboard = () => {
                               style={{ background: '#1e3a5f', fontSize: '10px' }}>{k.stage}</span>
                           </td>
                           <td className="px-3 py-2 text-blue-700 font-bold">₹{k.estimatedSaving || 0}</td>
-                          <td className="px-3 py-2 text-green-600 font-bold">₹{number(k.savingsAchieved) || 0}</td>
+                          <td className="px-3 py-2 text-green-600 font-bold">₹{Number(k.savingsAchieved) || 0}</td>
                         </tr>
                       ))}
                     </tbody>
