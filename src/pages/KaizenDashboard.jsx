@@ -29,7 +29,7 @@ const KaizenDashboard = () => {
   }))
 
   const teamData = TEAMS.map(team => ({
-    name: team.split(' ')[0],
+  name: team.split(' ')[0] + (team.split(' ')[1] ? '\n' + team.split(' ')[1] : ''),
     Ideas: kaizens.filter(k => k.submittedTeam === team).length,
     Implemented: kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length,
     Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0),
@@ -178,8 +178,9 @@ const KaizenDashboard = () => {
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Team</p>
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={teamData} barSize={40} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <BarChart data={teamData} barSize={30} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>                      
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-30} textAnchor="end" height={50} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                       <Tooltip />
                       <Bar dataKey="Ideas" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
