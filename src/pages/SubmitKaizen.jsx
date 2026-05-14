@@ -95,6 +95,7 @@ const SubmitKaizen = () => {
     title: '',
     team: '',
     area: '',
+    otherArea: '',
     problemTypes: [],
     categories: [],
     description: '',
@@ -161,6 +162,7 @@ const SubmitKaizen = () => {
     const idea = {
       id: Date.now(),
       ...form,
+      area: form.area === 'Others' ? form.otherArea : form.area,
       teamMembers: [...form.teamMembers, form.customMember].filter(Boolean).join(', '),
       mediaFiles,
       stage: 'Submitted',
@@ -264,6 +266,14 @@ const SubmitKaizen = () => {
                   </button>
                 ))}
               </div>
+              {form.area === 'Others' && (
+                <input
+                  placeholder="Specify department name..."
+                  value={form.otherArea}
+                  onChange={e => setForm(p => ({ ...p, otherArea: e.target.value }))}
+                  className="w-full mt-2 border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50"
+                />
+              )}
             </div>
           )}
 
