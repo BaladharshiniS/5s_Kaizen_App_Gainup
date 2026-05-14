@@ -178,8 +178,7 @@ const KaizenDashboard = () => {
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Team</p>
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={teamData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <BarChart data={teamData} barSize={40} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                       <Tooltip />
