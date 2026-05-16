@@ -5,7 +5,7 @@ import { AREAS, TEAMS, DEFAULT_CHECKLIST, TEAMS_DEPARTMENTS, getAudits } from '.
 
 const S_LEVELS = ['1S', '2S', '3S', '4S', '5S']
 
-const StatsSection = ({ audits, filtered, overallAvg, TEAMS }) => {
+const StatsSection = ({ audits, filtered, overallAvg, TEAMS, selectedTeam, selectedArea }) => {
   const [showTeams, setShowTeams] = useState(false)
 
   const auditedTeams = [...new Set(filtered.map(a => a.teamName).filter(Boolean))]
@@ -25,17 +25,16 @@ const StatsSection = ({ audits, filtered, overallAvg, TEAMS }) => {
       value: `${highest}%`,
       color: '#16a34a',
       bg: '#dcfce7',
-      sub: highestAudit ? `${highestAudit.teamName} · ${highestAudit.area} · ${highestAudit.date}` : ''
+      sub: highestAudit && !selectedTeam && !selectedArea ? `${highestAudit.teamName} · ${highestAudit.area}` : ''
     },
     {
       label: 'Lowest',
       value: `${lowest}%`,
       color: '#dc2626',
       bg: '#fee2e2',
-      sub: lowestAudit ? `${lowestAudit.teamName} · ${lowestAudit.area} · ${lowestAudit.date}` : ''
+      sub: lowestAudit && !selectedTeam && !selectedArea ? `${lowestAudit.teamName} · ${lowestAudit.area}` : ''
     },
     { label: 'Areas', value: [...new Set(filtered.map(a => a.area).filter(Boolean))].length, color: '#7c3aed', bg: '#f5f3ff' },
-    { label: 'Teams Audited', value: auditedTeams.length, color: '#d97706', bg: '#fffbeb', clickable: true },
   ]
 
   return (
@@ -192,6 +191,8 @@ const AuditDashboard = () => {
           filtered={filtered}
           overallAvg={overallAvg}
           TEAMS={TEAMS}
+          selectedTeam={selectedTeam}
+          selectedArea={selectedArea}
         />
 
         {/* Filters */}
@@ -293,11 +294,7 @@ const AuditDashboard = () => {
                     <XAxis dataKey="section" tick={{ fontSize: 9 }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    <Bar dataKey="Average" radius={[4, 4, 0, 0]}>
-                      {sectionData.map((_, index) => (
-                        <rect key={index} fill={Object.values(S_COLORS)[index]} />
-                      ))}
-                    </Bar>
+                    <Bar dataKey="Average" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -314,7 +311,7 @@ const AuditDashboard = () => {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    <Bar dataKey="Count" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Count" />
+                    <Bar dataKey="Count" fill="#f97316" radius={[4, 4, 0, 0]} name="Count" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

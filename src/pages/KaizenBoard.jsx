@@ -3,6 +3,15 @@ import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
 import { mockUsers, DESIGNATIONS, KAIZEN_STAGES, updateKaizen, getKaizens } from '../firebase'
 
+const STAGE_INCHARGE = {
+  'Submitted':             { name: 'Anyone', desig: 'Open to all' },
+  'Reviewing':             { name: 'Mr. Prasanth / Mrs. Jenifer', desig: 'Coordinator / 5S Incharge' },
+  'Approval':              { name: 'Mr. Askar', desig: 'Captain' },
+  'Waiting to Implement':  { name: 'Team Lead', desig: 'Respective Team Leader' },
+  'Wanting to Verify':     { name: 'Mr. Prasanth / Mrs. Jenifer', desig: 'Coordinator / 5S Incharge' },
+  'Closed':                { name: 'MD', desig: 'Managing Director' },
+}
+
 const STAGE_STYLE = {
   'Submitted': { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
   'Reviewing': { color: '#854d0e', bg: '#fef9c3', dot: '#eab308' },
@@ -48,6 +57,7 @@ const KaizenBoard = () => {
   const [filterTeam, setFilterTeam] = useState('')
   const [view, setView] = useState('table')
   const [moveError, setMoveError] = useState('')
+  const [hoveredStage, setHoveredStage] = useState(null)
 
   const loadKaizens = async () => {
   const data = await getKaizens()
@@ -127,7 +137,34 @@ useEffect(() => {
     return i < KAIZEN_STAGES.length - 1 ? KAIZEN_STAGES[i + 1] : null
   }
 
-  const canUpdate = user?.role === 'Admin' || user?.role === 'AuditIncharge' || user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge'
+  const canUpdate = user?.role === 'Admin' || user?.role === 'AuditIncharge' || user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge' || user?.role === 'MD'
+  
+  const canMoveStage = (currentStage) => {
+  if (currentStage === 'Submitted') 
+    return user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge'
+  if (currentStage === 'Reviewing') 
+    return user?.role === 'Admin' || user?.designation === 'Captain'
+  if (currentStage === 'Approval') 
+    return user?.role === 'TeamLead'
+  if (currentStage === 'Waiting to Implement') 
+    return user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge'
+  if (currentStage === 'Wanting to Verify') 
+    return user?.role === 'MD'
+  return false
+  }
+  const getHandlersForStage = (nextStage) => {
+  if (nextStage === 'Reviewing') 
+    return mockUsers.filter(u => u.role === 'Coordinator' || u.role === 'FiveS_Incharge')
+  if (nextStage === 'Approval') 
+    return mockUsers.filter(u => u.designation === 'Captain' || u.role === 'Admin')
+  if (nextStage === 'Waiting to Implement') 
+    return mockUsers.filter(u => u.role === 'TeamLead')
+  if (nextStage === 'Wanting to Verify') 
+    return mockUsers.filter(u => u.role === 'Coordinator' || u.role === 'FiveS_Incharge')
+  if (nextStage === 'Closed') 
+    return mockUsers.filter(u => u.role === 'MD')
+  return mockUsers
+}
 
   const filtered = kaizens.filter(k => {
     if (filterStage && k.stage !== filterStage) return false
@@ -166,23 +203,35 @@ useEffect(() => {
         </div>
 
         {/* Stage Summary */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
-          {KAIZEN_STAGES.map(stage => {
-            const style = STAGE_STYLE[stage]
-            const count = kaizens.filter(k => k.stage === stage).length
-            return (
-              <div key={stage}
-                onClick={() => setFilterStage(filterStage === stage ? '' : stage)}
-                className="rounded-xl p-2 text-center cursor-pointer"
-                style={{ background: filterStage === stage ? style.dot : style.bg, border: `2px solid ${style.dot}30` }}>
-                <p className="text-lg font-black"
-                  style={{ color: filterStage === stage ? 'white' : style.color }}>{count}</p>
-                <p className="text-xs font-semibold leading-tight"
-                  style={{ color: filterStage === stage ? 'white' : style.color }}>{stage}</p>
-              </div>
-            )
-          })}
-        </div>
+<div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+  {KAIZEN_STAGES.map(stage => {
+    const style = STAGE_STYLE[stage]
+    const count = kaizens.filter(k => k.stage === stage).length
+    const incharge = STAGE_INCHARGE[stage]
+    return (
+      <div key={stage}
+        onClick={() => setFilterStage(filterStage === stage ? '' : stage)}
+        onMouseEnter={() => setHoveredStage(stage)}
+        onMouseLeave={() => setHoveredStage(null)}
+        className="rounded-xl p-2 text-center cursor-pointer relative"
+        style={{ background: filterStage === stage ? style.dot : style.bg, border: `2px solid ${style.dot}30` }}>
+        <p className="text-lg font-black"
+          style={{ color: filterStage === stage ? 'white' : style.color }}>{count}</p>
+        <p className="text-xs font-semibold leading-tight"
+          style={{ color: filterStage === stage ? 'white' : style.color }}>{stage}</p>
+
+        {hoveredStage === stage && (
+          <div className="absolute z-20 top-full left-1/2 mt-2 w-44 rounded-xl shadow-xl p-3 text-left"
+            style={{ background: 'white', border: `2px solid ${style.dot}40`, transform: 'translateX(-50%)' }}>
+            <p className="text-xs font-black mb-1" style={{ color: style.color }}>Handled by:</p>
+            <p className="text-xs font-bold text-gray-800">{incharge.name}</p>
+            <p className="text-xs text-gray-400">{incharge.desig}</p>
+          </div>
+        )}
+      </div>
+    )
+  })}
+</div>
 
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-sm p-3 mb-4 flex flex-wrap gap-2 items-center">
@@ -403,6 +452,14 @@ useEffect(() => {
                         const isDone = selected.timestamps?.[stage]
                         const isCurrent = selected.stage === stage
                         const style = STAGE_STYLE[stage]
+                        const STAGE_INCHARGE = {
+                           'Submitted':            { name: 'Anyone', desig: 'Open to all' },
+                           'Reviewing':            { name: 'Mr. Prasanth / Mrs. Jenifer', desig: 'Coordinator / 5S Incharge' },
+                           'Approval':             { name: 'Mr. Askar', desig: 'Captain' },
+                           'Waiting to Implement': { name: 'Team Lead', desig: 'Respective Team Leader' },
+                           'Wanting to Verify':    { name: 'Mr. Prasanth / Mrs. Jenifer', desig: 'Coordinator / 5S Incharge' },
+                           'Closed':               { name: 'MD', desig: 'Managing Director' },
+                          }
                         return (
                           <tr key={stage} className="border-t border-gray-50"
                             style={{ background: isCurrent ? style.bg : 'white' }}>
@@ -465,7 +522,7 @@ useEffect(() => {
               )}
 
               {/* Move to Next Stage */}
-              {canUpdate && getNext(selected.stage) && (
+              {getNext(selected.stage) && (
                 <div className="space-y-3 pt-3 border-t-2 border-gray-100">
                   <p className="text-xs font-black text-gray-600 uppercase">
                     Move to: {getNext(selected.stage)}
@@ -477,6 +534,8 @@ useEffect(() => {
                       ⚠️ {moveError}
                     </div>
                   )}
+                  {canMoveStage(selected.stage) ? (<>
+                  <div className="rounded-xl p-3" style={{ background: '#eff6ff' }}> </div>
 
                   <div className="rounded-xl p-3" style={{ background: '#eff6ff' }}>
                     <p className="text-xs font-bold text-blue-700 mb-1">📋 Required Proof:</p>
@@ -485,28 +544,20 @@ useEffect(() => {
 
                   {/* Handler */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Handler Name *</label>
-                    <select
-                      value={isOtherHandler ? 'others' : handlerName}
-                      onChange={e => {
-                        if (e.target.value === 'others') {
-                          setIsOtherHandler(true)
-                          setHandlerName('')
-                          setHandlerDesignation('')
-                        } else {
-                          setIsOtherHandler(false)
-                          const found = mockUsers.find(u => u.name === e.target.value)
-                          setHandlerName(e.target.value)
-                          setHandlerDesignation(found?.designation || '')
-                        }
-                      }}
-                      className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50">
-                      <option value="">-- Select Handler --</option>
-                      {mockUsers.map(u => (
-                        <option key={u.email} value={u.name}>{u.name} ({u.designation})</option>
-                      ))}
-                      <option value="others">Others</option>
-                    </select>
+                    <div className="rounded-xl p-3" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                       <p className="text-xs font-bold text-gray-600 mb-1">Handler (from your login)</p>
+                       <div className="flex items-center gap-2">
+                             <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-xs"
+                               style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                               {user?.name?.[0]}
+                              </div>
+                        <div>
+                           <p className="text-sm font-black text-gray-800">{user?.name}</p>
+                           <p className="text-xs text-gray-500">{user?.designation}</p>
+                        </div>
+                          <span className="ml-auto text-green-600 text-xs font-bold">✅ Confirmed</span>
+                    </div>
+                  </div>
                     {isOtherHandler && (
                       <div className="mt-2 space-y-2">
                         <input value={customHandlerName} onChange={e => setCustomHandlerName(e.target.value)}
@@ -579,6 +630,18 @@ useEffect(() => {
                     style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
                     Move to {getNext(selected.stage)} →
                   </button>
+                </>
+              ) : (
+                <div className="rounded-2xl p-4 text-center" style={{ background: '#fef9c3', border: '1px solid #fde68a' }}>
+                  <p className="text-xs text-gray-500 mb-1">Current Stage</p>
+                  <p className="text-sm font-black text-gray-800">📌 {selected.stage}</p>
+                  <div className="mt-2 pt-2 border-t border-yellow-200">
+                    <p className="text-xs text-gray-500 mb-1">Waiting for:</p>
+                    <p className="text-sm font-black text-gray-800">{STAGE_INCHARGE[getNext(selected.stage)]?.name}</p>
+                    <p className="text-xs text-gray-400">{STAGE_INCHARGE[getNext(selected.stage)]?.desig}</p>
+                  </div>
+                </div>
+              )}
                 </div>
               )}
             </div>

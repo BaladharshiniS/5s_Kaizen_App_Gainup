@@ -409,53 +409,23 @@ const getPreviousAudits = (level) => {
             </div>
           )}
 
-          {/* Auditor */}
-          <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">
-            <label className="block text-xs font-black text-gray-600 uppercase mb-2">Auditor Name *</label>
-            <select
-              value={isOtherAuditor ? 'others' : auditorName}
-              onChange={e => {
-                if (e.target.value === 'others') {
-                  setIsOtherAuditor(true)
-                  setAuditorName('')
-                  setAuditorDesignation('')
-                } else {
-                  setIsOtherAuditor(false)
-                  const found = mockUsers.find(u => u.name === e.target.value)
-                  setAuditorName(e.target.value)
-                  setAuditorDesignation(found?.designation || '')
-                }
-              }}
-              className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50 mb-2">
-              <option value="">-- Select Auditor --</option>
-              {mockUsers.map(u => (
-                <option key={u.email} value={u.name}>{u.name} ({u.designation})</option>
-              ))}
-              <option value="others">Others (type manually)</option>
-            </select>
-            {isOtherAuditor && (
-              <div className="space-y-2 mt-2">
-                <input value={customAuditorName} onChange={e => setCustomAuditorName(e.target.value)}
-                  placeholder="Enter auditor name"
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50" />
-                <select value={customDesignation} onChange={e => setCustomDesignation(e.target.value)}
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50">
-                  <option value="">-- Select Designation --</option>
-                  {DESIGNATIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-            )}
-            {!isOtherAuditor && auditorDesignation && (
-              <p className="text-xs text-gray-500 mt-1">Designation: {auditorDesignation}</p>
-            )}
-          </div>
-
-          {/* Date */}
-          <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">
-            <label className="block text-xs font-black text-gray-600 uppercase mb-2">Audit Date</label>
-            <input type="date" value={auditDate} onChange={e => setAuditDate(e.target.value)}
-              className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50" />
-          </div>
+          {/* Auditor + Date — locked to login user and today */}
+<div className="bg-white rounded-2xl shadow-sm px-4 py-3 mb-3 flex items-center justify-between">
+  <div className="flex items-center gap-3">
+    <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
+      style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+      {user?.name?.[0]}
+    </div>
+    <div>
+      <p className="text-sm font-black text-gray-800">{user?.name}</p>
+      <p className="text-xs text-gray-400">{user?.designation}</p>
+    </div>
+  </div>
+  <div className="text-right">
+    <p className="text-xs font-black text-gray-700">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+    <p className="text-xs text-gray-400">Today</p>
+  </div>
+</div>
 
           {/* Team */}
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">

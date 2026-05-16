@@ -93,7 +93,7 @@ const SubmitKaizen = () => {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     title: '',
-    team: '',
+    team: user?.team || '',
     area: '',
     otherArea: '',
     problemTypes: [],
@@ -110,6 +110,7 @@ const SubmitKaizen = () => {
   const [submitted, setSubmitted] = useState(false)
   const [alertMsg, setAlertMsg] = useState('')
   const [activeCamera, setActiveCamera] = useState(false)
+  const [submitFor, setSubmitFor] = useState('myself')
 
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
@@ -166,7 +167,11 @@ const SubmitKaizen = () => {
       teamMembers: [...form.teamMembers, form.customMember].filter(Boolean).join(', '),
       mediaFiles,
       stage: 'Submitted',
-      submittedBy: user?.name,
+      submittedBy: user?.role === 'TeamLead' && submitFor === 'member' && form.teamMembers.length > 0
+        ? form.teamMembers[0]
+        : user?.name,
+      submittedOnBehalfBy: user?.role === 'TeamLead' && submitFor === 'member' ? user?.name : null,
+      submittedTeam: user?.role === 'TeamLead' || user?.role === 'Operator' ? user?.team : form.team,
       submittedDesignation: user?.designation,
       submittedTeam: form.team,
       role: user?.role,
@@ -232,21 +237,28 @@ const SubmitKaizen = () => {
           </div>
 
           {/* Team */}
-          <div>
-            <label className="block text-xs font-black text-gray-600 uppercase mb-2">Team *</label>
-            <div className="grid grid-cols-3 gap-2">
-              {TEAMS.map(t => (
-                <button key={t} type="button"
-                  onClick={() => setForm(p => ({ ...p, team: t, area: '', teamMembers: [] }))}
-                  className="py-2 px-2 rounded-xl text-xs font-bold transition-all leading-tight"
-                  style={form.team === t
-                    ? { background: 'linear-gradient(135deg, #f97316, #ea580c)', color: 'white' }
-                    : { background: '#f8fafc', color: '#475569', border: '2px solid #e2e8f0' }}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
+           {(user?.role === 'Admin' || user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge' || user?.role === 'AuditIncharge' || user?.role === 'MD') ? (
+             <div>
+              <label className="block text-xs font-black text-gray-600 uppercase mb-2">Team *</label>
+              <div className="grid grid-cols-3 gap-2">
+                {TEAMS.map(t => (
+                  <button key={t} type="button"
+                    onClick={() => setForm(p => ({ ...p, team: t, area: '', teamMembers: [] }))}
+                    className="py-2 px-2 rounded-xl text-xs font-bold transition-all leading-tight"
+                    style={form.team === t
+                      ? { background: 'linear-gradient(135deg, #f97316, #ea580c)', color: 'white' }
+                      : { background: '#f8fafc', color: '#475569', border: '2px solid #e2e8f0' }}>
+                    {t}
+                  </button>
+                ))} 
+              </div>
+             </div>
+            ) : (
+           <div className="rounded-xl p-3" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+             <p className="text-xs font-bold text-gray-500">Team</p>
+             <p className="text-sm font-black text-gray-800">{user?.team}</p>
+           </div>
+          )}
 
           {/* Department — filtered by team */}
           {form.team && (
@@ -410,8 +422,33 @@ const SubmitKaizen = () => {
               className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50" />
           </div>
 
+          {/* Submitting For — TeamLead only */}
+          {user?.role === 'TeamLead' && (
+            <div>
+              <label className="block text-xs font-black text-gray-600 uppercase mb-2">Submitting For *</label>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setSubmitFor('myself'); setForm(p => ({ ...p, teamMembers: [] })) }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                  style={submitFor === 'myself'
+                    ? { background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: 'white' }
+                    : { background: '#f8fafc', color: '#475569', border: '2px solid #e2e8f0' }}>
+                  👤 Myself
+                </button>
+                <button type="button"
+                  onClick={() => setSubmitFor('member')}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                  style={submitFor === 'member'
+                    ? { background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: 'white' }
+                    : { background: '#f8fafc', color: '#475569', border: '2px solid #e2e8f0' }}>
+                  👥 My Team Member
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Team Members — from organogram */}
-          {form.team && (
+          {user?.role === 'TeamLead' && submitFor === 'member' && form.team && (
             <div>
               <label className="block text-xs font-black text-gray-600 uppercase mb-2">
                 Team Members Involved
