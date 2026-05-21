@@ -96,7 +96,7 @@ const NewAudit = () => {
   const navigate = useNavigate()
 
   const canPutMarks = user?.role === 'AuditIncharge' || user?.role === 'MD'
-  const canAudit = user?.role === 'AuditIncharge' || user?.role === 'FiveS_Incharge' || user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'TeamLead'
+  const canAudit = user?.role === 'AuditIncharge' || user?.role === 'FiveS_Incharge' || user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'TeamLead' || user?.role === 'MD'
   const viewOnly = !canAudit
 
   const [step, setStep] = useState(1)

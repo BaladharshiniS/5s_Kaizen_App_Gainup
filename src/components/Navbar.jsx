@@ -21,17 +21,17 @@ const Navbar = () => {
   }
 
   const allNavItems = [
-    { label: 'MD View', emoji: '👔', path: '/md-view', roles: ['MD'] },
-    { label: 'Dashboard', emoji: '🏠', path: '/dashboard', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'New Audit', emoji: '📋', path: '/new-audit', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead'] },
-    { label: 'Audit History', emoji: '📊', path: '/audit-history', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Audit Trends', emoji: '📈', path: '/audit-dashboard', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Submit Idea', emoji: '💡', path: '/submit-kaizen', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Kaizen Board', emoji: '📌', path: '/kaizen-board', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Kaizen Stats', emoji: '🏆', path: '/kaizen-dashboard', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Organogram', emoji: '🏢', path: '/organogram', roles: ['Admin', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator'] },
-    { label: 'Master Setup', emoji: '⚙️', path: '/master-setup', roles: ['Admin', 'AuditIncharge'] },
-  ]
+  { label: 'Dashboard', emoji: '🏠', path: '/dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'New Audit', emoji: '📋', path: '/new-audit', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Auditor'] },
+  { label: 'Audit History', emoji: '📊', path: '/audit-history', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Audit Trends', emoji: '📈', path: '/audit-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Submit Idea', emoji: '💡', path: '/submit-kaizen', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Kaizen Board', emoji: '📌', path: '/kaizen-board', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Kaizen Stats', emoji: '🏆', path: '/kaizen-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Organogram', emoji: '🏢', path: '/organogram', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'MD View', emoji: '👔', path: '/md-view', roles: ['MD', 'Admin'] },
+  { label: 'Master Setup', emoji: '⚙️', path: '/master-setup', roles: ['MD', 'Admin', 'AuditIncharge'] },
+]
 
   const navItems = allNavItems.filter(item => item.roles.includes(user?.role))
 

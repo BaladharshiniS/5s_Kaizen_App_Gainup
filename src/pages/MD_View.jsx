@@ -8,6 +8,9 @@ const MDView = () => {
   const [tab, setTab] = useState('overview')
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST)
   const [selectedAudit, setSelectedAudit] = useState(null)
+  const [baTeam, setBaTeam] = useState('')
+  const [baDept, setBaDept] = useState('')
+  const [baLevel, setBaLevel] = useState('')
 
   useEffect(() => {
     getAudits().then(data => setAudits(data)).catch(() => setAudits([]))
@@ -162,96 +165,175 @@ const MDView = () => {
         )}
 
         {tab === 'before & after' && (
-          <div className="space-y-4">
-            {hasBeforeAfter.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center">
-                <p className="text-4xl mb-3">📷</p>
-                <p className="text-gray-400 text-sm">No before/after photos yet.</p>
+  <div className="space-y-4">
+
+    {/* Filters */}
+    <div className="bg-white rounded-2xl shadow-sm p-3 flex flex-wrap gap-2 items-center">
+      <select value={baTeam} onChange={e => { setBaTeam(e.target.value); setBaDept(''); setBaLevel('') }}
+        className="border-2 border-gray-100 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none bg-gray-50">
+        <option value="">All Teams</option>
+        {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <select value={baDept} onChange={e => setBaDept(e.target.value)}
+        className="border-2 border-gray-100 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none bg-gray-50">
+        <option value="">All Departments</option>
+        {[...new Set(audits.filter(a => !baTeam || a.teamName === baTeam).map(a => a.area).filter(Boolean))].map(d => (
+          <option key={d} value={d}>{d}</option>
+        ))}
+      </select>
+      <select value={baLevel} onChange={e => setBaLevel(e.target.value)}
+        className="border-2 border-gray-100 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none bg-gray-50">
+        <option value="">All S Levels</option>
+        {['1S', '2S', '3S', '4S', '5S'].map(l => <option key={l} value={l}>{l}</option>)}
+      </select>
+      {(baTeam || baDept || baLevel) && (
+        <button onClick={() => { setBaTeam(''); setBaDept(''); setBaLevel('') }}
+          className="text-xs text-red-500 font-bold">Clear ×</button>
+      )}
+    </div>
+
+    {/* Before & After Cards */}
+    {(() => {
+      // Group audits by team + dept + auditLevel
+      const groups = {}
+      audits.forEach(audit => {
+        if (!audit.beforePhotos || Object.keys(audit.beforePhotos).length === 0) return
+        const key = `${audit.teamName}||${audit.area}||${audit.auditLevel}`
+        if (!groups[key]) groups[key] = []
+        groups[key].push(audit)
+      })
+
+      // Sort each group by date
+      Object.keys(groups).forEach(key => {
+        groups[key].sort((a, b) => new Date(a.date) - new Date(b.date))
+      })
+
+      // Apply filters
+      const filteredKeys = Object.keys(groups).filter(key => {
+        const [team, dept, level] = key.split('||')
+        if (baTeam && team !== baTeam) return false
+        if (baDept && dept !== baDept) return false
+        if (baLevel && level !== baLevel) return false
+        return true
+      })
+
+      if (filteredKeys.length === 0) return (
+        <div className="bg-white rounded-2xl p-12 text-center">
+          <p className="text-4xl mb-3">📷</p>
+          <p className="text-gray-400 text-sm">No before/after photos found.</p>
+        </div>
+      )
+
+      return filteredKeys.map(key => {
+        const [team, dept, level] = key.split('||')
+        const group = groups[key]
+        const firstAudit = group[0]
+        const lastAudit = group[group.length - 1]
+        const hasAfter = group.length > 1
+
+        // Get all checklist item keys from first audit
+        const itemKeys = Object.keys(firstAudit.beforePhotos || {})
+
+        return (
+          <div key={key} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-100"
+              style={{ background: 'linear-gradient(135deg, #f8fafc, #eff6ff)' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-black text-gray-800">{team} — {dept}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    <span className="font-bold px-2 py-0.5 rounded-full text-white"
+                      style={{ background: '#1e3a5f', fontSize: '10px' }}>{level}</span>
+                    <span className="ml-2">{group.length} audit(s) done</span>
+                  </p>
+                </div>
+                {hasAfter ? (
+                  <span className="text-xs font-bold px-2 py-1 rounded-xl"
+                    style={{ background: '#dcfce7', color: '#166534' }}>✅ Improvement Available</span>
+                ) : (
+                  <span className="text-xs font-bold px-2 py-1 rounded-xl"
+                    style={{ background: '#fef9c3', color: '#854d0e' }}>⏳ Not yet re-audited</span>
+                )}
               </div>
-            ) : (
-              hasBeforeAfter.map(audit => (
-                <div key={audit.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                  {/* Audit Header — Full Details */}
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-black text-gray-800">
-                          {audit.area} — {audit.auditLevel} Audit
-                        </p>
-                        <div className="mt-1 space-y-0.5">
-                          <p className="text-xs text-gray-500">
-                            👤 <span className="font-semibold">{audit.auditorName}</span>
-                            {audit.auditorDesignation && (
-                              <span className="text-gray-400"> · {audit.auditorDesignation}</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            🏷️ Team <span className="font-semibold">{audit.teamName}</span>
-                          </p>
-                          <p className="text-xs text-gray-400">📅 {audit.date}</p>
+            </div>
+
+            {/* Photos */}
+            <div className="p-4 space-y-4">
+              {itemKeys.map(itemKey => {
+                const [sLevel, idx] = itemKey.split('_')
+                const item = checklist[sLevel]?.items[Number(idx)]
+                const beforePhoto = firstAudit.beforePhotos?.[itemKey]
+                const afterPhoto = hasAfter ? lastAudit.beforePhotos?.[itemKey] : null
+
+                if (!beforePhoto) return null
+
+                return (
+                  <div key={itemKey} className="rounded-xl overflow-hidden border border-gray-100">
+                    {/* Item label */}
+                    <div className="px-3 py-2" style={{ background: '#f8fafc' }}>
+                      <p className="text-xs font-bold text-gray-700">
+                        {sLevel} — {item?.english?.substring(0, 60)}
+                      </p>
+                      {item?.tamil && (
+                        <p className="text-xs text-blue-600 mt-0.5">{item.tamil.substring(0, 60)}</p>
+                      )}
+                    </div>
+
+                    {/* Before & After side by side */}
+                    <div className="grid grid-cols-2 gap-0">
+                      {/* Before */}
+                      <div className="border-r border-gray-100">
+                        <div className="px-3 py-1.5 text-center"
+                          style={{ background: '#fee2e2' }}>
+                          <p className="text-xs font-black text-red-600">BEFORE</p>
+                        </div>
+                        <img src={beforePhoto} alt="before"
+                          className="w-full h-36 object-cover" />
+                        <div className="px-3 py-2" style={{ background: '#fef9c9' }}>
+                          <p className="text-xs font-bold text-gray-700">{firstAudit.auditorName}</p>
+                          <p className="text-xs text-gray-400">{firstAudit.auditorDesignation}</p>
+                          <p className="text-xs text-gray-400">{firstAudit.date}</p>
                         </div>
                       </div>
-                      <div className="text-center ml-3">
-                        <span className="font-black px-3 py-1.5 rounded-xl text-sm block"
-                          style={{ background: getBg(audit.scorePercent || 0), color: getColor(audit.scorePercent || 0) }}>
-                          {audit.scorePercent || 0}%
-                        </span>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {audit.scoredMarks}/{audit.totalMarks}
-                        </p>
+
+                      {/* After */}
+                      <div>
+                        <div className="px-3 py-1.5 text-center"
+                          style={{ background: '#dcfce7' }}>
+                          <p className="text-xs font-black text-green-600">AFTER</p>
+                        </div>
+                        {afterPhoto ? (
+                          <>
+                            <img src={afterPhoto} alt="after"
+                              className="w-full h-36 object-cover" />
+                            <div className="px-3 py-2" style={{ background: '#f0fdf4' }}>
+                              <p className="text-xs font-bold text-gray-700">{lastAudit.auditorName}</p>
+                              <p className="text-xs text-gray-400">{lastAudit.auditorDesignation}</p>
+                              <p className="text-xs text-gray-400">{lastAudit.date}</p>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="h-36 flex items-center justify-center"
+                            style={{ background: '#f8fafc' }}>
+                            <div className="text-center">
+                              <p className="text-2xl mb-1">⏳</p>
+                              <p className="text-xs text-gray-400 font-semibold">Not yet re-audited</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-
-                  {/* Photos */}
-                  <div className="p-4 space-y-3">
-                    {Object.keys(audit.beforePhotos || {}).map(key => {
-                      const photo = audit.beforePhotos[key]
-                      const [sLevel, idx] = key.split('_')
-                      const item = checklist[sLevel]?.items[Number(idx)]
-                      return (
-                        <div key={key} className="rounded-xl overflow-hidden"
-                          style={{ border: `2px solid ${checklist[sLevel]?.color}30` }}>
-                          {/* Item Info */}
-                          <div className="px-3 py-2 flex items-center gap-2"
-                            style={{ background: checklist[sLevel]?.bg }}>
-                            <span className="text-xs font-black px-2 py-0.5 rounded-lg text-white"
-                              style={{ background: checklist[sLevel]?.color }}>
-                              {sLevel}
-                            </span>
-                            <p className="text-xs font-semibold text-gray-700 flex-1">
-                              {item?.english?.substring(0, 55)}...
-                            </p>
-                          </div>
-                          {/* Tamil */}
-                          {item?.tamil && (
-                            <p className="px-3 py-1 text-xs font-medium"
-                              style={{ background: '#f8fafc', color: '#2563eb' }}>
-                              {item.tamil.substring(0, 60)}...
-                            </p>
-                          )}
-                          {/* Photo */}
-                          <div className="p-3">
-                            <p className="text-xs font-bold text-gray-500 mb-2">
-                              📸 Current State Photo
-                            </p>
-                            {photo.startsWith('data:video') ? (
-                              <video src={photo} controls
-                                className="w-full rounded-xl" style={{ maxHeight: '200px' }} />
-                            ) : (
-                              <img src={photo} alt="current state"
-                                className="w-full h-44 object-cover rounded-xl" />
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
+                )
+              })}
+            </div>
           </div>
-        )}
+        )
+      })
+    })()}
+  </div>
+)}
 
         {tab === 'kaizen impact' && (
           <div className="space-y-4">
