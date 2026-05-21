@@ -206,7 +206,7 @@ const MDView = () => {
 
       // Step 2 — Sort each group by date (oldest first)
       Object.keys(groups).forEach(key => {
-        groups[key].sort((a, b) => new Date(a.date) - new Date(b.date))
+        groups[key].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
       })
 
       // Step 3 — Apply filters
