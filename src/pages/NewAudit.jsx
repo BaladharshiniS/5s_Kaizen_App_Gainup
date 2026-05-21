@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { TEAMS, DEFAULT_CHECKLIST, mockUsers, DESIGNATIONS, TEAMS_DEPARTMENTS, saveAudit, getAudits } from '../firebase'
+import { TEAMS, DEFAULT_CHECKLIST, mockUsers, DESIGNATIONS, TEAMS_DEPARTMENTS, saveAudit, getAudits, uploadImageToCloudinary } from '../firebase'
 import { useLang } from '../App'
 
 const S_LEVELS = ['1S', '2S', '3S', '4S', '5S']
@@ -206,16 +206,16 @@ const getPreviousAudits = (level) => {
     }
   }, [area, teamName, allAudits])
 
-  const handlePhoto = (sLevel, idx, e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const key = `${sLevel}_${idx}`
-      setBeforePhotos(p => ({ ...p, [key]: reader.result }))
-    }
-    reader.readAsDataURL(file)
+  const handlePhoto = async (sLevel, idx, e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  try {
+    const url = await uploadImageToCloudinary(file)
+    setBeforePhotos(p => ({ ...p, [`${sLevel}_${idx}`]: url }))
+  } catch (err) {
+    console.error('Upload failed:', err)
   }
+}
 
   const finalAuditorName = isOtherAuditor ? customAuditorName : auditorName
   const finalDesignation = isOtherAuditor ? customDesignation : auditorDesignation
@@ -827,7 +827,15 @@ const getPreviousAudits = (level) => {
 
       {/* ── Real-time Camera Modal ── */}
       {activeCamera && <CameraModal
-        onCapture={dataUrl => { setBeforePhotos(p => ({ ...p, [activeCamera]: dataUrl })); setActiveCamera(null) }}
+        onCapture={async dataUrl => {
+          try {
+            const url = await uploadImageToCloudinary(dataUrl)
+            setBeforePhotos(p => ({ ...p, [activeCamera]: url }))
+          } catch (err) {
+            console.error('Upload failed:', err)
+          }
+          setActiveCamera(null)
+        }}
         onClose={() => setActiveCamera(null)}
       />}
     </div>

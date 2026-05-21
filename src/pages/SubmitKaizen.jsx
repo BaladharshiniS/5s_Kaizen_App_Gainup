@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { KAIZEN_CATEGORIES, KAIZEN_PROBLEM_TYPES, TEAMS, TEAMS_DEPARTMENTS, TEAMS_MEMBERS, saveKaizen } from '../firebase'
-
+import { KAIZEN_CATEGORIES, KAIZEN_PROBLEM_TYPES, TEAMS, TEAMS_DEPARTMENTS, TEAMS_MEMBERS, saveKaizen, DEFAULT_CHECKLIST, mockUsers, DESIGNATIONS, saveAudit, getAudits, uploadImageToCloudinary } from '../firebase'
 const PopupAlert = ({ message, onClose }) => (
   message ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -140,15 +139,18 @@ const SubmitKaizen = () => {
     ? TEAMS_MEMBERS[form.team]
     : []
 
-  const handleMedia = (e) => {
-    const files = Array.from(e.target.files)
-    const readers = files.map(file => new Promise(resolve => {
-      const reader = new FileReader()
-      reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result })
-      reader.readAsDataURL(file)
+  const handleMedia = async (e) => {
+  const files = Array.from(e.target.files)
+  try {
+    const urls = await Promise.all(files.map(async file => {
+      const url = await uploadImageToCloudinary(file)
+      return { name: file.name, type: file.type, data: url }
     }))
-    Promise.all(readers).then(results => setMediaFiles(p => [...p, ...results]))
+    setMediaFiles(p => [...p, ...urls])
+  } catch (err) {
+    console.error('Upload failed:', err)
   }
+}
 
   const handleSubmit = async () => {
     if (!form.title) { setAlertMsg('Please enter idea title!'); return }
@@ -489,8 +491,13 @@ const SubmitKaizen = () => {
       </div>
       
     {activeCamera && <CameraModal
-        onCapture={dataUrl => {
-          setMediaFiles(p => [...p, { name: 'camera.jpg', type: 'image/jpeg', data: dataUrl }])
+        onCapture={async dataUrl => {
+          try {
+            const url = await uploadImageToCloudinary(dataUrl)
+            setMediaFiles(p => [...p, { name: 'camera.jpg', type: 'image/jpeg', data: url }])
+          } catch (err) {
+            console.error('Upload failed:', err)
+          }
           setActiveCamera(false)
         }}
         onClose={() => setActiveCamera(false)}

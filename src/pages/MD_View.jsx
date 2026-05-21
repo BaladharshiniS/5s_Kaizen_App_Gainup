@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { TEAMS, DEFAULT_CHECKLIST, getAudits, getKaizens } from '../firebase'
+import { useLang } from '../App'
 
 const MDView = () => {
   const [audits, setAudits] = useState([])
@@ -11,6 +12,7 @@ const MDView = () => {
   const [baTeam, setBaTeam] = useState('')
   const [baDept, setBaDept] = useState('')
   const [baLevel, setBaLevel] = useState('')
+  const lang = useLang()
 
   useEffect(() => {
     getAudits().then(data => setAudits(data)).catch(() => setAudits([]))
@@ -192,28 +194,26 @@ const MDView = () => {
       )}
     </div>
 
-    {/* Before & After Cards */}
     {(() => {
-      // Group audits by team + dept + auditLevel
+      // Step 1 — Group all audits by team + dept only
       const groups = {}
       audits.forEach(audit => {
         if (!audit.beforePhotos || Object.keys(audit.beforePhotos).length === 0) return
-        const key = `${audit.teamName}||${audit.area}||${audit.auditLevel}`
+        const key = `${audit.teamName}||${audit.area}`
         if (!groups[key]) groups[key] = []
         groups[key].push(audit)
       })
 
-      // Sort each group by date
+      // Step 2 — Sort each group by date (oldest first)
       Object.keys(groups).forEach(key => {
         groups[key].sort((a, b) => new Date(a.date) - new Date(b.date))
       })
 
-      // Apply filters
+      // Step 3 — Apply filters
       const filteredKeys = Object.keys(groups).filter(key => {
-        const [team, dept, level] = key.split('||')
+        const [team, dept] = key.split('||')
         if (baTeam && team !== baTeam) return false
         if (baDept && dept !== baDept) return false
-        if (baLevel && level !== baLevel) return false
         return true
       })
 
@@ -225,37 +225,45 @@ const MDView = () => {
       )
 
       return filteredKeys.map(key => {
-        const [team, dept, level] = key.split('||')
+        const [team, dept] = key.split('||')
         const group = groups[key]
-        const firstAudit = group[0]
-        const lastAudit = group[group.length - 1]
-        const hasAfter = group.length > 1
 
-        // Get all checklist item keys from first audit
-        const itemKeys = Object.keys(firstAudit.beforePhotos || {})
+        // Step 4 — For each checklist item key, find first and latest photo
+        const itemMap = {}
+        group.forEach(audit => {
+          Object.entries(audit.beforePhotos || {}).forEach(([itemKey, photo]) => {
+            const [sLevel] = itemKey.split('_')
+            if (baLevel && sLevel !== baLevel) return
+            if (!itemMap[itemKey]) {
+              itemMap[itemKey] = {
+                before: photo,
+                beforeDate: audit.date,
+                beforeAuditor: audit.auditorName,
+                beforeDesig: audit.auditorDesignation,
+                after: null,
+                afterDate: null,
+                afterAuditor: null,
+                afterDesig: null,
+              }
+            } else {
+              itemMap[itemKey].after = photo
+              itemMap[itemKey].afterDate = audit.date
+              itemMap[itemKey].afterAuditor = audit.auditorName
+              itemMap[itemKey].afterDesig = audit.auditorDesignation
+            }
+          })
+        })
+
+        const itemKeys = Object.keys(itemMap)
+        if (itemKeys.length === 0) return null
 
         return (
           <div key={key} className="bg-white rounded-2xl shadow-sm overflow-hidden">
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-100"
               style={{ background: 'linear-gradient(135deg, #f8fafc, #eff6ff)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-black text-gray-800">{team} — {dept}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    <span className="font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ background: '#1e3a5f', fontSize: '10px' }}>{level}</span>
-                    <span className="ml-2">{group.length} audit(s) done</span>
-                  </p>
-                </div>
-                {hasAfter ? (
-                  <span className="text-xs font-bold px-2 py-1 rounded-xl"
-                    style={{ background: '#dcfce7', color: '#166534' }}>✅ Improvement Available</span>
-                ) : (
-                  <span className="text-xs font-bold px-2 py-1 rounded-xl"
-                    style={{ background: '#fef9c3', color: '#854d0e' }}>⏳ Not yet re-audited</span>
-                )}
-              </div>
+              <p className="text-sm font-black text-gray-800">{team} — {dept}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{group.length} audit(s) done</p>
             </div>
 
             {/* Photos */}
@@ -263,54 +271,53 @@ const MDView = () => {
               {itemKeys.map(itemKey => {
                 const [sLevel, idx] = itemKey.split('_')
                 const item = checklist[sLevel]?.items[Number(idx)]
-                const beforePhoto = firstAudit.beforePhotos?.[itemKey]
-                const afterPhoto = hasAfter ? lastAudit.beforePhotos?.[itemKey] : null
-
-                if (!beforePhoto) return null
+                const data = itemMap[itemKey]
+                if (!item) return null
 
                 return (
                   <div key={itemKey} className="rounded-xl overflow-hidden border border-gray-100">
-                    {/* Item label */}
+
+                    {/* Item label with Tamil/English */}
                     <div className="px-3 py-2" style={{ background: '#f8fafc' }}>
-                      <p className="text-xs font-bold text-gray-700">
-                        {sLevel} — {item?.english?.substring(0, 60)}
-                      </p>
-                      {item?.tamil && (
-                        <p className="text-xs text-blue-600 mt-0.5">{item.tamil.substring(0, 60)}</p>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-lg text-white"
+                          style={{ background: checklist[sLevel]?.color || '#1e3a5f' }}>
+                          {sLevel}
+                        </span>
+                        <p className="text-xs font-bold text-gray-700 flex-1">
+                          {lang === 'ta' && item.tamil ? item.tamil : item.english}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Before & After side by side */}
                     <div className="grid grid-cols-2 gap-0">
+
                       {/* Before */}
                       <div className="border-r border-gray-100">
-                        <div className="px-3 py-1.5 text-center"
-                          style={{ background: '#fee2e2' }}>
+                        <div className="px-3 py-1.5 text-center" style={{ background: '#fee2e2' }}>
                           <p className="text-xs font-black text-red-600">BEFORE</p>
                         </div>
-                        <img src={beforePhoto} alt="before"
-                          className="w-full h-36 object-cover" />
-                        <div className="px-3 py-2" style={{ background: '#fef9c9' }}>
-                          <p className="text-xs font-bold text-gray-700">{firstAudit.auditorName}</p>
-                          <p className="text-xs text-gray-400">{firstAudit.auditorDesignation}</p>
-                          <p className="text-xs text-gray-400">{firstAudit.date}</p>
+                        <img src={data.before} alt="before" className="w-full h-36 object-cover" />
+                        <div className="px-2 py-2" style={{ background: '#fff5f5' }}>
+                          <p className="text-xs font-bold text-gray-700">{data.beforeAuditor}</p>
+                          <p className="text-xs text-gray-400">{data.beforeDesig}</p>
+                          <p className="text-xs text-gray-400">{data.beforeDate}</p>
                         </div>
                       </div>
 
                       {/* After */}
                       <div>
-                        <div className="px-3 py-1.5 text-center"
-                          style={{ background: '#dcfce7' }}>
+                        <div className="px-3 py-1.5 text-center" style={{ background: '#dcfce7' }}>
                           <p className="text-xs font-black text-green-600">AFTER</p>
                         </div>
-                        {afterPhoto ? (
+                        {data.after ? (
                           <>
-                            <img src={afterPhoto} alt="after"
-                              className="w-full h-36 object-cover" />
-                            <div className="px-3 py-2" style={{ background: '#f0fdf4' }}>
-                              <p className="text-xs font-bold text-gray-700">{lastAudit.auditorName}</p>
-                              <p className="text-xs text-gray-400">{lastAudit.auditorDesignation}</p>
-                              <p className="text-xs text-gray-400">{lastAudit.date}</p>
+                            <img src={data.after} alt="after" className="w-full h-36 object-cover" />
+                            <div className="px-2 py-2" style={{ background: '#f0fdf4' }}>
+                              <p className="text-xs font-bold text-gray-700">{data.afterAuditor}</p>
+                              <p className="text-xs text-gray-400">{data.afterDesig}</p>
+                              <p className="text-xs text-gray-400">{data.afterDate}</p>
                             </div>
                           </>
                         ) : (

@@ -32,7 +32,20 @@ export const getAudits = async () => {
   const snapshot = await get(auditsRef)
   if (!snapshot.exists()) return []
   const data = snapshot.val()
-  return Object.values(data).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  return Object.values(data)
+    .map(audit => {
+      const cleanBeforePhotos = {}
+      Object.entries(audit.beforePhotos || {}).forEach(([key, val]) => {
+        if (typeof val === 'string' && !val.startsWith('data:')) {
+          cleanBeforePhotos[key] = val
+        }
+      })
+      return { ...audit, beforePhotos: cleanBeforePhotos }
+    })
+    .sort((a, b) => {
+      if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp)
+      return 0
+    })
 }
 
 // Listen to audits in real-time
@@ -41,10 +54,20 @@ export const listenAudits = (callback) => {
   return onValue(auditsRef, (snapshot) => {
     if (!snapshot.exists()) { callback([]); return }
     const data = snapshot.val()
-    const list = Object.values(data).sort((a, b) => {
-  if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp)
-  return 0
-})
+    const list = Object.values(data)
+      .map(audit => {
+        const cleanBeforePhotos = {}
+        Object.entries(audit.beforePhotos || {}).forEach(([key, val]) => {
+          if (typeof val === 'string' && !val.startsWith('data:')) {
+            cleanBeforePhotos[key] = val
+          }
+        })
+        return { ...audit, beforePhotos: cleanBeforePhotos }
+      })
+      .sort((a, b) => {
+        if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp)
+        return 0
+      })
     callback(list)
   })
 }
@@ -276,4 +299,28 @@ export const DEFAULT_CHECKLIST = {
       { id: 10, english: 'Awareness about 5S given in surroundings and public places', tamil: 'சுற்றுப்புறங்கள் மற்றும் பொதுஇடங்களில் 5S பற்றி விழிப்புணர்வு கொடுக்கப்பட்டிருந்தால்', marks: 15 },
     ]
   },
+}
+
+export const uploadImageToCloudinary = async (base64OrFile) => {
+  const formData = new FormData()
+  
+  if (typeof base64OrFile === 'string') {
+    // base64 string from camera
+    const res = await fetch(base64OrFile)
+    const blob = await res.blob()
+    formData.append('file', blob)
+  } else {
+    // file from gallery
+    formData.append('file', base64OrFile)
+  }
+  
+  formData.append('upload_preset', 'kaizen_uploads')
+  formData.append('cloud_name', 'dwmd3vmug')
+
+  const response = await fetch(
+    'https://api.cloudinary.com/v1_1/dwmd3vmug/image/upload',
+    { method: 'POST', body: formData }
+  )
+  const data = await response.json()
+  return data.secure_url
 }
