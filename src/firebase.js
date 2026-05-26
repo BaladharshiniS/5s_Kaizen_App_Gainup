@@ -111,6 +111,22 @@ export const updateKaizen = async (firebaseKey, updates) => {
   }
 }
 
+// Get user password from Firebase (for login)
+export const getUserPassword = async (email) => {
+  const passwordsRef = ref(db, `passwords/${email.replace(/\./g, '_')}`)
+  const snapshot = await get(passwordsRef)
+  if (snapshot.exists()) return snapshot.val()
+  // If not in Firebase yet, return default from mockUsers
+  const user = mockUsers.find(u => u.email === email)
+  return user?.password || null
+}
+
+// Update user password in Firebase
+export const updateUserPassword = async (email, newPassword) => {
+  const passwordsRef = ref(db, `passwords/${email.replace(/\./g, '_')}`)
+  await set(passwordsRef, newPassword)
+}
+
 // Delete an audit
 export const deleteAudit = async (id) => {
   const auditRef = ref(db, `audits/${id}`)

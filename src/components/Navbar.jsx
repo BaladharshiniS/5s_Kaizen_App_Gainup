@@ -7,9 +7,17 @@ import { useLang } from '../App'
 const Navbar = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, changePassword } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [oldPwd, setOldPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdError, setPwdError] = useState('')
+  const [pwdSuccess, setPwdSuccess] = useState('')
+  const [showOld, setShowOld] = useState(false)
+  const [showNew, setShowNew] = useState(false)
   const lang = useLang()
   const [localLang, setLocalLang] = useState(() => localStorage.getItem('lang') || 'en')
 
@@ -175,10 +183,101 @@ const Navbar = () => {
                 </div>
               ))}
             </div>
+            <button onClick={() => { setShowProfile(false); setShowChangePassword(true) }}
+              className="w-full py-3 rounded-xl font-bold text-sm mb-2"
+              style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }}>
+              🔑 Change Password
+            </button>
+            <button onClick={() => { logout(); navigate('/') }}
+              className="w-full py-3 rounded-xl font-bold text-sm mb-2"
+              style={{ background: 'rgba(220,38,38,0.15)', color: '#ef4444', border: '1px solid rgba(220,38,38,0.3)' }}>
+              🚪 Logout
+            </button>
             <button onClick={() => setShowProfile(false)}
               className="w-full text-white py-3 rounded-xl font-bold text-sm"
               style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
               Close
+            </button>
+          </div>
+        </div>
+      )}
+    {showChangePassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => { setShowChangePassword(false); setPwdError(''); setPwdSuccess(''); setOldPwd(''); setNewPwd(''); setConfirmPwd('') }}>
+          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full mx-4"
+            onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-black text-gray-800 mb-1">🔑 Change Password</h2>
+            <p className="text-xs text-gray-400 mb-4">{user?.name}</p>
+
+            {pwdError && (
+              <div className="rounded-xl p-3 mb-3 text-xs text-red-600 font-semibold"
+                style={{ background: '#fee2e2' }}>⚠️ {pwdError}</div>
+            )}
+            {pwdSuccess && (
+              <div className="rounded-xl p-3 mb-3 text-xs text-green-600 font-semibold"
+                style={{ background: '#dcfce7' }}>✅ {pwdSuccess}</div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Current Password</label>
+                <div className="relative">
+                  <input type={showOld ? 'text' : 'password'} value={oldPwd}
+                    onChange={e => setOldPwd(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50 pr-10" />
+                  <button onClick={() => setShowOld(p => !p)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                    {showOld ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">New Password</label>
+                <div className="relative">
+                  <input type={showNew ? 'text' : 'password'} value={newPwd}
+                    onChange={e => setNewPwd(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50 pr-10" />
+                  <button onClick={() => setShowNew(p => !p)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                    {showNew ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Confirm New Password</label>
+                <input type="password" value={confirmPwd}
+                  onChange={e => setConfirmPwd(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50" />
+              </div>
+            </div>
+
+            <button onClick={async () => {
+              setPwdError('')
+              setPwdSuccess('')
+              if (!oldPwd || !newPwd || !confirmPwd) { setPwdError('Please fill all fields!'); return }
+              if (newPwd !== confirmPwd) { setPwdError('New passwords do not match!'); return }
+              if (newPwd.length < 4) { setPwdError('Password must be at least 4 characters!'); return }
+              const userEmail = mockUsers.find(u => u.name === user?.name)?.email
+              const result = await changePassword(userEmail, oldPwd, newPwd)
+              if (result.success) {
+                setPwdSuccess('Password changed successfully!')
+                setOldPwd(''); setNewPwd(''); setConfirmPwd('')
+              } else {
+                setPwdError(result.error)
+              }
+            }}
+              className="w-full text-white py-3 rounded-xl font-bold text-sm mt-4"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+              Update Password
+            </button>
+
+            <button onClick={() => { setShowChangePassword(false); setPwdError(''); setPwdSuccess(''); setOldPwd(''); setNewPwd(''); setConfirmPwd('') }}
+              className="w-full py-2 rounded-xl font-bold text-sm mt-2 text-gray-400">
+              Cancel
             </button>
           </div>
         </div>
