@@ -93,7 +93,9 @@ useEffect(() => {
     setMoveError('Please add proof (description or photo) before moving!')
     return
   }
-  if (!finalHandler) {
+  const effectiveHandler = isOtherHandler ? customHandlerName : (handlerName || user?.name)
+  const effectiveHandlerDesig = isOtherHandler ? customHandlerDesig : (handlerDesignation || user?.designation)
+  if (!effectiveHandler) {
     setMoveError('Please select handler name!')
     return
   }
@@ -105,7 +107,7 @@ useEffect(() => {
       ...cleanItem,
       stage: newStage,
       timestamps: { ...updatedItem.timestamps, [newStage]: new Date().toLocaleDateString() },
-      handlers: { ...updatedItem.handlers, [newStage]: `${finalHandler} (${finalHandlerDesig})` },
+      handlers: { ...updatedItem.handlers, [newStage]: `${effectiveHandler} (${effectiveHandlerDesig})` },
       savingsAchieved: newStage === 'Closed' && saving ? Number(saving) : updatedItem.savingsAchieved,
       incentiveGiven: newStage === 'Closed' && incentive ? incentive : updatedItem.incentiveGiven,
       comments: [...(updatedItem.comments || []), {
@@ -113,8 +115,8 @@ useEffect(() => {
         text: comment || proofText,
         proof: proofText,
         proofPhoto,
-        by: finalHandler,
-        designation: finalHandlerDesig,
+        by: effectiveHandler,
+        designation: effectiveHandlerDesig,
         date: new Date().toLocaleDateString()
       }]
     }

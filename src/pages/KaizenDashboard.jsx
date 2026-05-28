@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TEAMS, getKaizens } from '../firebase'
 
 const COLORS = ['#1e3a5f', '#f97316', '#0f766e', '#7c3aed', '#b91c1c', '#065f46', '#b45309', '#0369a1', '#be185d']
@@ -13,10 +13,10 @@ const KaizenDashboard = () => {
   const [error, setError] = useState('')
 
   useEffect(() => {
-  getKaizens()
-    .then(data => { setKaizens(data); setLoading(false) })
-    .catch(() => { setKaizens([]); setLoading(false) })
-}, [])
+    getKaizens()
+      .then(data => { setKaizens(data); setLoading(false) })
+      .catch(() => { setKaizens([]); setLoading(false) })
+  }, [])
 
   const totalSavings = kaizens.reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0)
   const totalEstimated = kaizens.reduce((s, k) => s + (Number(k.estimatedSaving) || 0), 0)
@@ -29,7 +29,7 @@ const KaizenDashboard = () => {
   }))
 
   const teamData = TEAMS.map(team => ({
-  name: team + (team.split(' ')[1] ? '\n' + team.split(' ')[1] : ''),
+    name: team,
     Ideas: kaizens.filter(k => k.submittedTeam === team).length,
     Implemented: kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length,
     Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0),
@@ -53,26 +53,26 @@ const KaizenDashboard = () => {
   })).filter(d => d.value > 0)
 
   if (loading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white px-6 py-4 rounded-2xl shadow-sm">
-        <p className="text-sm font-bold text-slate-600">
-          Loading dashboard...
-        </p>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="bg-white px-6 py-4 rounded-2xl shadow-sm">
+          <p className="text-sm font-bold text-slate-600">Loading dashboard...</p>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
       <Navbar />
       <div className="p-4 max-w-5xl mx-auto">
+
         {error && (
           <div className="mb-4 bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold">
-        {error}
-      </div>
-      )}
+            {error}
+          </div>
+        )}
+
         <h1 className="text-xl font-black text-gray-800 mb-4">🏆 Kaizen Dashboard</h1>
 
         {/* Stats */}
@@ -110,43 +110,68 @@ const KaizenDashboard = () => {
           </div>
         ) : (
           <>
+            {/* ── OVERVIEW TAB ── */}
             {tab === 'overview' && (
               <div className="space-y-4">
+
+                {/* Bar chart — Ideas by Stage */}
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Stage</p>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={stageData}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={stageData} margin={{ top: 5, right: 10, left: 0, bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 9, fill: '#475569' }}
+                        angle={-40}
+                        textAnchor="end"
+                        interval={0}
+                        height={80}
+                      />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={25} />
                       <Tooltip />
-                      <Bar dataKey="Count" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Count" fill="#1e3a5f" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
+                {/* Pie chart + Savings Tracker side by side */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  {/* Pie chart — By Category */}
                   <div className="bg-white rounded-2xl shadow-sm p-4">
                     <p className="text-xs font-black text-gray-600 uppercase mb-3">By Category</p>
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="value"
-                        labelLine={false}>
-                        {categoryData.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                        <Legend formatter={v => <span style={{ fontSize: 9 }}>{v}</span>} />
-                        <Tooltip />
+                        <Pie
+                          data={categoryData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={80}
+                          dataKey="value"
+                          labelLine={false}
+                        >
+                          {categoryData.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [value, name]} />
                       </PieChart>
                     </ResponsiveContainer>
+                    {/* Custom legend below — no overlap */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 justify-center">
+                      {categoryData.map((entry, i) => (
+                        <div key={entry.name} className="flex items-center gap-1">
+                          <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                            style={{ background: COLORS[i % COLORS.length] }} />
+                          <span style={{ fontSize: '10px' }} className="text-gray-600">{entry.name}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
+                  {/* Savings Tracker */}
                   <div className="bg-white rounded-2xl shadow-sm p-4">
                     <div className="flex justify-between mb-3">
                       <p className="text-xs font-black text-gray-600 uppercase">Savings Tracker</p>
@@ -162,25 +187,36 @@ const KaizenDashboard = () => {
                       </div>
                       <div className="w-full rounded-full h-3" style={{ background: '#e2e8f0' }}>
                         <div className="h-3 rounded-full"
-                          style={{ width: `${totalEstimated ? Math.min(100, Math.round(totalSavings / totalEstimated * 100)) : 0}%`, background: 'linear-gradient(90deg, #16a34a, #22c55e)' }}></div>
+                          style={{
+                            width: `${totalEstimated ? Math.min(100, Math.round(totalSavings / totalEstimated * 100)) : 0}%`,
+                            background: 'linear-gradient(90deg, #16a34a, #22c55e)'
+                          }} />
                       </div>
                       <p className="text-xs text-gray-400 text-center">
                         {totalEstimated ? Math.min(100, Math.round(totalSavings / totalEstimated * 100)) : 0}% of target achieved
                       </p>
                     </div>
                   </div>
+
                 </div>
               </div>
             )}
 
+            {/* ── BY TEAM TAB ── */}
             {tab === 'by team' && (
               <div className="space-y-3">
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Team</p>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={teamData} barSize={30} margin={{ top: 5, right: 20, left: 0, bottom: 5 }} barCategoryGap="50%">                      
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={teamData} barSize={22} margin={{ top: 5, right: 10, left: 0, bottom: 70 }} barCategoryGap="40%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 9 }} type="category" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 9, fill: '#475569' }}
+                        angle={-35}
+                        textAnchor="end"
+                        interval={0}
+                      />
                       <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                       <Tooltip />
                       <Bar dataKey="Ideas" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
@@ -219,15 +255,16 @@ const KaizenDashboard = () => {
               </div>
             )}
 
+            {/* ── BY DEPT TAB ── */}
             {tab === 'by dept' && (
               <div className="space-y-3">
                 <div className="bg-white rounded-2xl shadow-sm p-4">
                   <p className="text-xs font-black text-gray-600 uppercase mb-3">Ideas by Department</p>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="Number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                       <Tooltip />
                       <Bar dataKey="Count" fill="#f97316" radius={[0, 4, 4, 0]} />
                     </BarChart>
@@ -236,6 +273,7 @@ const KaizenDashboard = () => {
               </div>
             )}
 
+            {/* ── IDEAS LIST TAB ── */}
             {tab === 'ideas list' && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">

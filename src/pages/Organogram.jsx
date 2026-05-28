@@ -123,7 +123,7 @@ const Organogram = () => {
           <div className="mt-4 grid grid-cols-3 gap-3">
             {[
               { role: 'Captain', name: 'Mr. Askar', color: '#f97316' },
-              { role: 'Coordinator', name: 'Mr. Prabath', color: '#3b82f6' },
+              { role: 'Coordinator', name: 'Mr. Prasanth', color: '#3b82f6' },
               { role: 'Sec. Coordinator', name: 'Mrs. Karthika', color: '#8b5cf6' },
             ].map(l => (
               <div key={l.role} className="rounded-xl p-3 text-center"
@@ -195,7 +195,7 @@ const Organogram = () => {
 {/* Coordinators */}
 <div className="flex justify-center gap-4 mb-2">
   {[
-    { name: 'Mr. Prabath', role: 'Coordinator', initials: 'MP', color: '#3b82f6' },
+    { name: 'Mr. Prasanth', role: 'Coordinator', initials: 'MP', color: '#3b82f6' },
     { name: 'Mrs. Karthika', role: 'Sec. Coordinator', initials: 'MK', color: '#8b5cf6' },
   ].map(c => (
     <div key={c.name} className="rounded-2xl p-3 text-center border-2 min-w-32"

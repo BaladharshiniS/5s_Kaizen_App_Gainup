@@ -142,23 +142,23 @@ export const deleteKaizen = async (id) => {
 // ── All your existing static data (unchanged) ─────────────────────────
 
 export const mockUsers = [
-  { email: 'admin@gainup.com', password: 'admin123', role: 'Admin', name: 'Mr. Askar', designation: 'Captain', team: 'Management' },
+  { email: 'askar@gainup.com', password: 'askar123', role: 'Admin', name: 'Mr. Askar', designation: 'Captain', team: 'Management' },
   { email: 'md@gainup.com', password: 'md123', role: 'MD', name: 'MD', designation: 'Managing Director', team: 'Management' },
-  { email: 'krishnan@gainup.com', password: 'krish123', role: 'AuditIncharge', name: 'Mr. Krishnan', designation: 'Internal Audit Incharge', team: 'Management' },
-  { email: 'coord@gainup.com', password: 'coord123', role: 'Coordinator', name: 'Mr. Prasanth', designation: 'Coordinator', team: 'Management' },
+  { email: 'krishnan@gainup.com', password: 'krishnan123', role: 'AuditIncharge', name: 'Mr. Krishnan', designation: 'Internal Audit Incharge', team: 'Management' },
+  { email: 'prasanth@gainup.com', password: 'prasanth123', role: 'Coordinator', name: 'Mr. Prasanth', designation: 'Coordinator', team: 'Management' },
   { email: 'jenifer@gainup.com', password: 'jenifer123', role: 'FiveS_Incharge', name: 'Mrs. Jenifer', designation: '5S Incharge', team: 'Management' },
-  { email: 'sec@gainup.com', password: 'sec123', role: 'Coordinator', name: 'Mrs. Karthika', designation: 'Sourcing/Coordinator', team: 'Management' },
+  { email: 'karthika@gainup.com', password: 'karthika123', role: 'Coordinator', name: 'Mrs. Karthika', designation: 'Sourcing/Coordinator', team: 'Management' },
   { email: 'royallions@gainup.com', password: 'royal123', role: 'TeamLead', name: 'Royal Lions Lead', designation: 'Team Leader', team: 'Royal Lions' },
   { email: 'dragonforce@gainup.com', password: 'dragon123', role: 'TeamLead', name: 'Dragon Force Lead', designation: 'Team Leader', team: 'Dragon Force' },
   { email: 'goldentiger@gainup.com', password: 'tiger123', role: 'TeamLead', name: 'Golden Tiger Lead', designation: 'Team Leader', team: 'Golden Tiger' },
   { email: 'goldeneagle@gainup.com', password: 'eagle123', role: 'TeamLead', name: 'Golden Eagle Lead', designation: 'Team Leader', team: 'Golden Eagle' },
   { email: 'bison@gainup.com', password: 'bison123', role: 'TeamLead', name: 'Bison Warriors Lead', designation: 'Team Leader', team: 'Bison Warriors' },
-  { email: 'penguins@gainup.com', password: 'peng123', role: 'TeamLead', name: 'Penguins Lead', designation: 'Team Leader', team: 'Penguins' },
-  { email: 'phoenix@gainup.com', password: 'phoe123', role: 'TeamLead', name: 'Phoenix Squad Lead', designation: 'Team Leader', team: 'Phoenix Squad' },
+  { email: 'penguins@gainup.com', password: 'penguines123', role: 'TeamLead', name: 'Penguins Lead', designation: 'Team Leader', team: 'Penguins' },
+  { email: 'phoenix@gainup.com', password: 'phoenix123', role: 'TeamLead', name: 'Phoenix Squad Lead', designation: 'Team Leader', team: 'Phoenix Squad' },
   { email: 'storm@gainup.com', password: 'storm123', role: 'TeamLead', name: 'Storm Blades Lead', designation: 'Team Leader', team: 'Storm Blades' },
-  { email: 'spartan@gainup.com', password: 'spart123', role: 'TeamLead', name: 'Spartan Kings Lead', designation: 'Team Leader', team: 'Spartan Kings' },
-  { email: 'auditor@gainup.com', password: 'audit123', role: 'Auditor', name: 'Auditor 1', designation: 'Senior Auditor', team: 'Management' },
-  { email: 'operator@gainup.com', password: 'oper123', role: 'Operator', name: 'Operator 1', designation: 'Machine Operator', team: 'Royal Lions' },
+  { email: 'spartan@gainup.com', password: 'spartan123', role: 'TeamLead', name: 'Spartan Kings Lead', designation: 'Team Leader', team: 'Spartan Kings' },
+  { email: 'auditor@gainup.com', password: 'auditor123', role: 'Auditor', name: 'Auditor 1', designation: 'Senior Auditor', team: 'Management' },
+  { email: 'operator@gainup.com', password: 'operator123', role: 'Operator', name: 'Operator 1', designation: 'Machine Operator', team: 'Royal Lions' },
 ]
 
 export const TEAMS = [
