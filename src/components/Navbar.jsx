@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { mockUsers } from '../firebase'
@@ -20,6 +20,31 @@ const Navbar = () => {
   const [showNew, setShowNew] = useState(false)
   const lang = useLang()
   const [localLang, setLocalLang] = useState(() => localStorage.getItem('lang') || 'en')
+  const [notifications, setNotifications] = useState([])
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifsRead, setNotifsRead] = useState(false)
+  const notifRef = useRef()
+
+  useEffect(() => {
+  if (!user) return
+  const load = async () => {
+    const { getNotifications } = await import('../firebase')
+    const notifs = await getNotifications(user)
+    setNotifications(notifs)
+  }
+  load()
+}, [user])
+
+useEffect(() => {
+  const handleClick = (e) => {
+    if (notifRef.current && !notifRef.current.contains(e.target)) {
+      setShowNotifs(false)
+    }
+  }
+  document.addEventListener('mousedown', handleClick)
+  return () => document.removeEventListener('mousedown', handleClick)
+}, [])
+
 
   const toggleLang = () => {
     const newLang = localLang === 'en' ? 'ta' : 'en'
@@ -39,6 +64,8 @@ const Navbar = () => {
   { label: 'Organogram', emoji: '🏢', path: '/organogram', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
   { label: 'MD View', emoji: '👔', path: '/md-view', roles: ['MD', 'Admin'] },
   { label: 'Master Setup', emoji: '⚙️', path: '/master-setup', roles: ['MD', 'Admin', 'AuditIncharge'] },
+  { label: 'My Ideas', emoji: '💡', path: '/my-ideas', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Team Performance', emoji: '📊', path: '/team-performance', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator'] },
 ]
 
   const navItems = allNavItems.filter(item => item.roles.includes(user?.role))
@@ -79,13 +106,72 @@ const Navbar = () => {
               </button>
             )}
 
-            {pending > 0 && (
-              <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer"
-                style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)' }}
-                onClick={() => navigate('/kaizen-board')}>
-                <span className="text-red-400 text-xs font-bold">🔔 {pending}</span>
+            {/* Notification Bell */}
+<div className="relative" ref={notifRef}>
+  <button
+    onClick={() => { setShowNotifs(p => !p); setNotifsRead(true) }}
+    className="relative w-9 h-9 rounded-xl flex items-center justify-center"
+    style={{ background: 'rgba(255,255,255,0.1)' }}>
+    <span className="text-white text-base">🔔</span>
+    {notifications.length > 0 && !notifsRead && (
+      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-white font-black"
+        style={{ background: '#ef4444', fontSize: '9px' }}>
+        {notifications.length > 9 ? '9+' : notifications.length}
+      </span>
+    )}
+  </button>
+
+  {/* Dropdown */}
+  {showNotifs && (
+    <div className="absolute right-0 top-12 w-80 rounded-2xl shadow-2xl overflow-hidden z-50"
+      style={{ background: 'white', border: '1px solid #e2e8f0' }}>
+
+      <div className="px-4 py-3 flex items-center justify-between"
+        style={{ background: '#0f172a' }}>
+        <p className="text-white text-xs font-black">Notifications</p>
+        <span className="text-blue-300 text-xs">{notifications.length} alerts</span>
+      </div>
+
+      <div className="max-h-96 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-3xl mb-2">✅</p>
+            <p className="text-xs text-gray-400 font-semibold">All clear! No alerts.</p>
+          </div>
+        ) : (
+          notifications.map(n => (
+            <div key={n.id}
+              onClick={() => { navigate('/kaizen-board'); setShowNotifs(false) }}
+              className="px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-50"
+              style={{ borderLeft: `3px solid ${n.dot}` }}>
+              <p className="text-xs font-black text-gray-800">{n.title}</p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.message}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: n.bg, color: n.color }}>
+                  {n.team}
+                </span>
+                {n.days > 0 && (
+                  <span className="text-xs text-gray-400">{n.days} days</span>
+                )}
               </div>
-            )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {notifications.length > 0 && (
+        <div className="px-4 py-2 border-t border-gray-100">
+          <button
+            onClick={() => { navigate('/kaizen-board'); setShowNotifs(false) }}
+            className="w-full text-xs font-bold text-blue-600 py-1">
+            View all in Kaizen Board →
+          </button>
+        </div>
+      )}
+    </div>
+  )}
+</div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer"
               style={{ background: 'rgba(255,255,255,0.08)' }}
               onClick={() => setShowProfile(true)}>

@@ -12,6 +12,8 @@ import KaizenDashboard from './pages/KaizenDashboard'
 import MasterSetup from './pages/MasterSetup'
 import Organogram from './pages/Organogram'
 import MDView from './pages/MD_View'
+import MyIdeas from './pages/MyIdeas'
+import TeamPerformance from './pages/TeamPerformance'
 
 export const LangContext = createContext('en')
 export const useLang = () => useContext(LangContext)
@@ -47,7 +49,9 @@ function App() {
           <Route path="/kaizen-dashboard" element={<ProtectedRoute><KaizenDashboard /></ProtectedRoute>} />
           <Route path="/master-setup" element={<ProtectedRoute><MasterSetup /></ProtectedRoute>} />
           <Route path="/organogram" element={<ProtectedRoute><Organogram /></ProtectedRoute>} />
+          <Route path="/my-ideas" element={<ProtectedRoute><MyIdeas /></ProtectedRoute>} />
           <Route path="/md-view" element={<ProtectedRoute><MDView /></ProtectedRoute>} />
+          <Route path="/team-performance" element={<ProtectedRoute><TeamPerformance /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </LangContext.Provider>

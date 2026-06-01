@@ -207,11 +207,14 @@ const getPreviousAudits = (level) => {
   }, [area, teamName, allAudits])
 
   const handlePhoto = async (sLevel, idx, e) => {
-  const file = e.target.files[0]
-  if (!file) return
+  const files = Array.from(e.target.files)
+  if (!files.length) return
   try {
-    const url = await uploadImageToCloudinary(file)
-    setBeforePhotos(p => ({ ...p, [`${sLevel}_${idx}`]: url }))
+    const urls = await Promise.all(files.map(f => uploadImageToCloudinary(f)))
+    setBeforePhotos(p => ({
+      ...p,
+      [`${sLevel}_${idx}`]: [...(p[`${sLevel}_${idx}`] || []), ...urls]
+    }))
   } catch (err) {
     console.error('Upload failed:', err)
   }
@@ -220,22 +223,63 @@ const getPreviousAudits = (level) => {
   const finalAuditorName = isOtherAuditor ? customAuditorName : auditorName
   const finalDesignation = isOtherAuditor ? customDesignation : auditorDesignation
 
-  const handleSubmit = () => {
-    if (!area) { setAlertMsg('Please select a department!'); return }
-    if (!auditLevel) { setAlertMsg('Please select audit level!'); return }
-    if (!teamName) { setAlertMsg('Please select a team!'); return }
-    if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
+const handleSubmit = () => {
+  if (!area) { setAlertMsg('Please select a department!'); return }
+  if (!auditLevel) { setAlertMsg('Please select audit level!'); return }
+  if (!teamName) { setAlertMsg('Please select a team!'); return }
+  if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
 
-    const totalItems = getActiveLevels().reduce((sum, s) => sum + checklist?.[s]?.items || [].length, 0)
-    const answered = Object.keys(scores).filter(k => Number(scores[k]) > 0).length
+  const allKeys = getActiveLevels().flatMap(sLevel =>
+    (checklist[sLevel]?.items || []).map((_, idx) => `${sLevel}_${idx}`)
+  )
 
-    if (canPutMarks && answered === 0) {
-      setAlertMsg('⚠️ No scores entered! Please enter scores before submitting.')
+  // ── Scorer validation (AuditIncharge / MD) ──────────────────────────
+  if (canPutMarks) {
+    const answered = allKeys.filter(k => Number(scores[k]) > 0).length
+    if (answered === 0) {
+      setAlertMsg('⚠️ No scores entered! Please score at least one item before submitting.')
       return
     }
 
-    setShowConfirm(true)
+    // All items must have a score (no skipping)
+    const unanswered = allKeys.filter(k => scores[k] === undefined || scores[k] === null || scores[k] === '')
+    if (unanswered.length > 0) {
+      setAlertMsg(`⚠️ ${unanswered.length} item(s) have no score. Please score all items. Use 0 if not applicable.`)
+      return
+    }
+
+    // 0-score items must have a remark
+    const missingRemarks = getActiveLevels().flatMap(sLevel =>
+      (checklist[sLevel]?.items || []).map((item, idx) => {
+        const key = `${sLevel}_${idx}`
+        const val = Number(scores[key] || 0)
+        return val === 0 && !remarks[key]?.trim()
+          ? `${sLevel} Point ${idx + 1}: "${item.english.substring(0, 30)}..."`
+          : null
+      }).filter(Boolean)
+    )
+    if (missingRemarks.length > 0) {
+      setAlertMsg(
+        `⚠️ These 0-score points need a remark:\n${missingRemarks.slice(0, 3).join('\n')}` +
+        (missingRemarks.length > 3 ? `\n...and ${missingRemarks.length - 3} more` : '')
+      )
+      return
+    }
   }
+
+  // ── Non-scorer validation (Coordinator, TeamLead, Auditor) ──────────
+  if (!canPutMarks && canAudit) {
+    const hasPhotos = allKeys.some(k => (beforePhotos[k] || []).length > 0)
+    const hasRemarks = allKeys.some(k => remarks[k]?.trim())
+
+    if (!hasPhotos && !hasRemarks) {
+      setAlertMsg('⚠️ Please add at least one photo or observation before submitting.')
+      return
+    }
+  }
+
+  setPreviewMode(true)
+}
 
   const doSubmit = async () => {
   setShowConfirm(false)
@@ -322,12 +366,13 @@ const getPreviousAudits = (level) => {
                   </p>
                 )}
 
-                {photo && (
-                  <img
-                    src={photo}
-                    alt=""
-                    className="w-full h-40 object-cover rounded-xl"
-                  />
+                {photo && Array.isArray(photo) && photo.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {photo.map((url, i) => (
+                      <img key={i} src={url} alt=""
+                        className="w-20 h-20 object-cover rounded-xl" />
+                      ))}
+                   </div>
                 )}
 
               </div>
@@ -734,63 +779,123 @@ const getPreviousAudits = (level) => {
                           </div>
                         )}
 
-                        {isLow && canPutMarks && (
-                          <div className="mt-2">
-                            <input
-                              type="text"
-                              maxLength={200}
-                              placeholder="Reason for low score (required, max 200 chars)..."
-                              value={remarks[key] || ''}
-                              onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
-                              className="w-full border-2 border-orange-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-orange-50"
-                            />
-                            <p className="text-xs text-gray-400 text-right mt-0.5">
-                              {(remarks[key] || '').length}/200
-                            </p>
-                          </div>
-                        )}
+                        {/* Review/remark — always visible for canPutMarks, required when score is 0 or low */}
+{canPutMarks && (
+  <div className="mt-2">
+    <label className="text-xs font-bold mb-1 block"
+      style={{ color: val === 0 ? '#dc2626' : isLow ? '#d97706' : '#94a3b8' }}>
+      {val === 0
+        ? '📝 Remark required for 0 score *'
+        : isLow
+          ? '📝 Reason for low score (required)'
+          : '📝 Remark (optional)'}
+    </label>
+    <input
+      type="text"
+      maxLength={200}
+      placeholder={
+        val === 0
+          ? 'Explain why score is 0 (required)...'
+          : isLow
+            ? 'Reason for low score...'
+            : 'Add any observation or comment...'
+      }
+      value={remarks[key] || ''}
+      onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
+      className="w-full border-2 rounded-xl px-3 py-2 text-xs focus:outline-none"
+      style={{
+        background: val === 0 ? '#fee2e2' : isLow ? '#fff7ed' : '#f8fafc',
+        borderColor: val === 0 ? '#fca5a5' : isLow ? '#fed7aa' : '#e2e8f0'
+      }}
+    />
+    <p className="text-xs text-gray-400 text-right mt-0.5">
+      {(remarks[key] || '').length}/200
+    </p>
+  </div>
+)}
+
+{/* Remark for non-scorers (Coordinator, TeamLead, Auditor) */}
+{!canPutMarks && canAudit && (
+  <div className="mt-2">
+    <label className="text-xs font-bold text-gray-400 mb-1 block">
+      📝 Your Observation (optional)
+    </label>
+    <input
+      type="text"
+      maxLength={200}
+      placeholder="Add your observation or comment..."
+      value={remarks[key] || ''}
+      onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
+      className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50"
+    />
+  </div>
+)}
 
                         {canAudit && (
-                          <div className="mt-3">
-                            <p className="text-xs font-bold text-gray-500 mb-1">📸 Current State</p>
-                            {beforePhotos[key] ? (
-                              <div className="relative">
-                                {beforePhotos[key].startsWith('data:video') ? (
-                                  <video src={beforePhotos[key]} controls className="w-full h-24 rounded-xl" />
-                                ) : (
-                                  <img
-                                    src={beforePhotos[key]}
-                                    alt="current"
-                                    className="w-full h-24 object-cover rounded-xl cursor-pointer"
-                                    onClick={() => setPreviewImg(beforePhotos[key])}
-                                  />
-                                )}
-                                <button onClick={() => setBeforePhotos(p => { const n = { ...p }; delete n[key]; return n })}
-                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">×</button>
-                                <button
-                                  onClick={() => setPreviewImg(beforePhotos[key])}
-                                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">🔍</button>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-2">
-                                <button type="button"
-                                  onClick={() => setActiveCamera(key)}
-                                  className="h-16 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
-                                  style={{ background: '#eff6ff' }}>
-                                  <span className="text-base">📷</span>
-                                  <span className="text-xs text-blue-600 font-black">Camera</span>
-                                </button>
-                                <label className="h-16 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400"
-                                  style={{ background: '#f8fafc' }}>
-                                  <span className="text-base">🖼️</span>
-                                  <span className="text-xs text-gray-400">Gallery</span>
-                                  <input type="file" accept="image/*,video/*" className="hidden"
-                                    onChange={e => handlePhoto(sLevel, idx, e)} />
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        )}
+  <div className="mt-3">
+    <p className="text-xs font-bold text-gray-500 mb-2">📸 Current State</p>
+
+    {/* Show existing photos */}
+    {(beforePhotos[key] || []).length > 0 && (
+      <div className="flex gap-2 flex-wrap mb-2">
+        {(beforePhotos[key] || []).map((url, photoIdx) => (
+          <div key={photoIdx} className="relative w-20 h-20">
+            <img
+              src={url}
+              alt={`photo ${photoIdx + 1}`}
+              className="w-20 h-20 object-cover rounded-xl cursor-pointer"
+              onClick={() => setPreviewImg(url)}
+            />
+            {/* Delete individual photo */}
+            <button
+              onClick={() => setBeforePhotos(p => ({
+                ...p,
+                [key]: p[key].filter((_, i) => i !== photoIdx)
+              }))}
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+              ×
+            </button>
+            {/* Preview */}
+            <button
+              onClick={() => setPreviewImg(url)}
+              className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+              🔍
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* Always show add more buttons */}
+    <div className="grid grid-cols-2 gap-2">
+      <button type="button"
+        onClick={() => setActiveCamera(key)}
+        className="h-14 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
+        style={{ background: '#eff6ff' }}>
+        <span className="text-base">📷</span>
+        <span className="text-xs text-blue-600 font-black">
+          {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Camera'}
+        </span>
+      </button>
+      <label className="h-14 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400"
+        style={{ background: '#f8fafc' }}>
+        <span className="text-base">🖼️</span>
+        <span className="text-xs text-gray-400">
+          {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Gallery'}
+        </span>
+        <input type="file" accept="image/*,video/*" multiple className="hidden"
+          onChange={e => handlePhoto(sLevel, idx, e)} />
+      </label>
+    </div>
+
+    {/* Photo count */}
+    {(beforePhotos[key] || []).length > 0 && (
+      <p className="text-xs text-gray-400 mt-1 text-right">
+        {(beforePhotos[key] || []).length} photo(s) added
+      </p>
+    )}
+  </div>
+)}
                       </div>
                     )
                   })}
@@ -817,7 +922,7 @@ const getPreviousAudits = (level) => {
         )}
 
         {canAudit && (
-          <button type="button" onClick={() => setPreviewMode(true)}
+          <button type="button" onClick={handleSubmit}
             className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg mt-4 mb-8"
             style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
             Submit Audit ✅
@@ -830,9 +935,12 @@ const getPreviousAudits = (level) => {
         onCapture={async dataUrl => {
           try {
             const url = await uploadImageToCloudinary(dataUrl)
-            setBeforePhotos(p => ({ ...p, [activeCamera]: url }))
+            setBeforePhotos(p => ({
+              ...p,
+               [activeCamera]: [...(p[activeCamera] || []), url]
+            }))
           } catch (err) {
-            console.error('Upload failed:', err)
+             console.error('Upload failed:', err)
           }
           setActiveCamera(null)
         }}

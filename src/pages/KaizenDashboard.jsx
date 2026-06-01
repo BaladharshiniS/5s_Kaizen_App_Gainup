@@ -9,6 +9,10 @@ const STAGES = ['Submitted', 'Reviewing', 'Approval', 'Waiting to Implement', 'W
 const KaizenDashboard = () => {
   const [kaizens, setKaizens] = useState([])
   const [tab, setTab] = useState('overview')
+  const [lbMonth, setLbMonth] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -34,6 +38,55 @@ const KaizenDashboard = () => {
     Implemented: kaizens.filter(k => k.submittedTeam === team && k.stage === 'Closed').length,
     Savings: kaizens.filter(k => k.submittedTeam === team).reduce((s, k) => s + (Number(k.savingsAchieved) || 0), 0),
   })).filter(t => t.Ideas > 0)
+
+  // ── Leaderboard data ──────────────────────────────────────────────────
+  const allMonths = [...new Set(kaizens.map(k => {
+    const d = new Date(k.timestamp || k.submittedDate)
+    if (isNaN(d)) return null
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }).filter(Boolean))].sort().reverse()
+
+  const formatMonthLabel = (ym) => {
+    const [y, m] = ym.split('-')
+    return new Date(y, m - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+  }
+
+  const leaderboardData = (() => {
+    const monthKaizens = lbMonth
+      ? kaizens.filter(k => {
+          const d = new Date(k.timestamp || k.submittedDate)
+          if (isNaN(d)) return false
+          const km = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          return km === lbMonth
+        })
+      : kaizens
+
+    const byPerson = {}
+    monthKaizens.forEach(k => {
+      const name = k.submittedBy || 'Unknown'
+      if (!byPerson[name]) {
+        byPerson[name] = {
+          name,
+          team: k.submittedTeam || k.team || '-',
+          ideas: 0,
+          closed: 0,
+          savings: 0,
+        }
+      }
+      byPerson[name].ideas += 1
+      if (k.stage === 'Closed') byPerson[name].closed += 1
+      byPerson[name].savings += Number(k.savingsAchieved) || 0
+    })
+
+    return Object.values(byPerson)
+      .sort((a, b) => b.ideas - a.ideas || b.savings - a.savings)
+      .slice(0, 10)
+  })()
+
+  const medals = ['🥇', '🥈', '🥉']
+  const medalBg = ['#fef9c3', '#f1f5f9', '#fff7ed']
+  const medalBorder = ['#eab308', '#94a3b8', '#f97316']
+  const medalColor = ['#854d0e', '#475569', '#9a3412']
 
   const areaData = [...new Set(kaizens.map(k => k.area).filter(Boolean))].map(area => ({
     name: area.split(' ')[0],
@@ -92,7 +145,7 @@ const KaizenDashboard = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto">
-          {['overview', 'by team', 'by dept', 'ideas list'].map(t => (
+          {['overview', 'by team', 'by dept', 'leaderboard', 'ideas list'].map(t => (
             <button key={t} onClick={() => setTab(t)}
               className="px-3 py-1.5 rounded-xl text-xs font-bold capitalize whitespace-nowrap"
               style={tab === t
@@ -270,6 +323,165 @@ const KaizenDashboard = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
+            )}
+
+            {/* ── LEADERBOARD TAB ── */}
+            {tab === 'leaderboard' && (
+              <div className="space-y-4">
+
+                {/* Month selector */}
+                <div className="bg-white rounded-2xl p-3 shadow-sm">
+                  <p className="text-xs font-black text-gray-500 uppercase mb-2">Select Month</p>
+                  <select
+                    value={lbMonth}
+                    onChange={e => setLbMonth(e.target.value)}
+                    className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none bg-gray-50">
+                    <option value="">All Time</option>
+                    {allMonths.map(m => (
+                      <option key={m} value={m}>{formatMonthLabel(m)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {leaderboardData.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-10 text-center">
+                    <p className="text-4xl mb-2">🏆</p>
+                    <p className="text-xs text-gray-400">No ideas submitted this month yet.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Top 3 podium cards */}
+                    {leaderboardData.length >= 1 && (
+                      <div className="grid grid-cols-1 gap-3">
+                        {leaderboardData.slice(0, 3).map((person, i) => (
+                          <div key={person.name}
+                            className="rounded-2xl p-4 shadow-sm"
+                            style={{
+                              background: medalBg[i] || 'white',
+                              border: `2px solid ${medalBorder[i] || '#e2e8f0'}`
+                            }}>
+                            <div className="flex items-center gap-3">
+
+                              {/* Medal + rank */}
+                              <div className="flex flex-col items-center w-10">
+                                <span className="text-2xl">{medals[i] || `#${i + 1}`}</span>
+                                <span className="text-xs font-black mt-0.5"
+                                  style={{ color: medalColor[i] || '#475569' }}>
+                                  #{i + 1}
+                                </span>
+                              </div>
+
+                              {/* Avatar */}
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
+                                style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                                {person.name?.[0]}
+                              </div>
+
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-gray-800 truncate">{person.name}</p>
+                                <p className="text-xs text-gray-400 truncate">{person.team}</p>
+                              </div>
+
+                              {/* Stats */}
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-lg font-black"
+                                  style={{ color: medalColor[i] || '#475569' }}>
+                                  {person.ideas}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {person.ideas === 1 ? 'idea' : 'ideas'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Bottom stats row */}
+                            <div className="flex gap-3 mt-3 pt-3 border-t"
+                              style={{ borderColor: `${medalBorder[i]}40` }}>
+                              <div className="flex-1 text-center">
+                                <p className="text-xs font-black text-green-600">{person.closed}</p>
+                                <p className="text-xs text-gray-400">Closed</p>
+                              </div>
+                              <div className="flex-1 text-center">
+                                <p className="text-xs font-black text-blue-700">
+                                  {person.ideas - person.closed}
+                                </p>
+                                <p className="text-xs text-gray-400">Active</p>
+                              </div>
+                              <div className="flex-1 text-center">
+                                <p className="text-xs font-black text-purple-600">
+                                  ₹{person.savings.toLocaleString('en-IN')}
+                                </p>
+                                <p className="text-xs text-gray-400">Savings</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Rest of leaderboard — rank 4 onwards */}
+                    {leaderboardData.length > 3 && (
+                      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                        <div className="px-4 py-2" style={{ background: '#f8fafc' }}>
+                          <p className="text-xs font-black text-gray-500 uppercase">Others</p>
+                        </div>
+                        <table className="w-full text-xs">
+                          <thead style={{ background: '#f1f5f9' }}>
+                            <tr>
+                              <th className="px-3 py-2 text-left text-gray-500 font-bold">Rank</th>
+                              <th className="px-3 py-2 text-left text-gray-500 font-bold">Name</th>
+                              <th className="px-3 py-2 text-left text-gray-500 font-bold">Team</th>
+                              <th className="px-3 py-2 text-center text-gray-500 font-bold">Ideas</th>
+                              <th className="px-3 py-2 text-center text-gray-500 font-bold">Savings</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {leaderboardData.slice(3).map((person, i) => (
+                              <tr key={person.name} className="border-t border-gray-50 hover:bg-gray-50">
+                                <td className="px-3 py-2 font-black text-gray-400">#{i + 4}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-black text-xs flex-shrink-0"
+                                      style={{ background: '#1e3a5f' }}>
+                                      {person.name?.[0]}
+                                    </div>
+                                    <span className="font-bold text-gray-800">{person.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-gray-400">{person.team}</td>
+                                <td className="px-3 py-2 text-center font-black text-blue-700">{person.ideas}</td>
+                                <td className="px-3 py-2 text-center font-black text-purple-600">
+                                  ₹{person.savings.toLocaleString('en-IN')}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Month summary */}
+                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                      <p className="text-xs font-black text-gray-500 uppercase mb-3">
+                        {lbMonth ? formatMonthLabel(lbMonth) : 'All Time'} Summary
+                      </p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: 'Total Ideas', value: leaderboardData.reduce((s, p) => s + p.ideas, 0), color: '#1e40af', bg: '#dbeafe' },
+                          { label: 'Implemented', value: leaderboardData.reduce((s, p) => s + p.closed, 0), color: '#166534', bg: '#dcfce7' },
+                          { label: 'Total Savings', value: `₹${leaderboardData.reduce((s, p) => s + p.savings, 0).toLocaleString('en-IN')}`, color: '#5b21b6', bg: '#ede9fe' },
+                        ].map(({ label, value, color, bg }) => (
+                          <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
+                            <p className="text-sm font-black" style={{ color }}>{value}</p>
+                            <p className="text-xs mt-0.5" style={{ color }}>{label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

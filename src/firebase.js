@@ -197,7 +197,7 @@ export const TEAMS_MEMBERS = {
 
 export const KAIZEN_STAGES = [
   'Submitted', 'Reviewing', 'Approval',
-  'Waiting to Implement', 'Wanting to Verify', 'Closed',
+  'Waiting to Implement', 'Wanting to Verify', 'Closed', 'Rejected',
 ]
 
 export const DESIGNATIONS = [
@@ -315,6 +315,97 @@ export const DEFAULT_CHECKLIST = {
       { id: 10, english: 'Awareness about 5S given in surroundings and public places', tamil: 'சுற்றுப்புறங்கள் மற்றும் பொதுஇடங்களில் 5S பற்றி விழிப்புணர்வு கொடுக்கப்பட்டிருந்தால்', marks: 15 },
     ]
   },
+}
+
+// ── Notification helpers ──────────────────────────────────────────────
+
+export const getNotifications = async (user) => {
+  const kaizensRef = ref(db, 'kaizens')
+  const snapshot = await get(kaizensRef)
+  if (!snapshot.exists()) return []
+  const data = snapshot.val()
+  const kaizens = Object.values(data)
+  const notifications = []
+  const now = new Date()
+
+  kaizens.forEach(k => {
+    if (k.stage === 'Closed') return
+
+    // Days stuck in current stage
+    const stageDate = k.timestamps?.[k.stage]
+    if (!stageDate) return
+    const entered = new Date(stageDate)
+    if (isNaN(entered)) return
+    const days = Math.floor((now - entered) / (1000 * 60 * 60 * 24))
+
+    const isCoordinator = user?.role === 'Coordinator' || user?.role === 'FiveS_Incharge'
+    const isMD = user?.role === 'MD'
+    const isAdmin = user?.role === 'Admin'
+    const isSubmitter = k.submittedBy === user?.name || k.submittedBy === user?.email
+
+    // 🚨 14+ days → MD + Admin + Coordinator
+    if (days >= 14 && (isMD || isAdmin || isCoordinator)) {
+      notifications.push({
+        id: `${k.id}-md`,
+        type: 'md',
+        title: '🚨 MD Attention Required',
+        message: `"${k.title}" stuck in ${k.stage} for ${days} days`,
+        team: k.submittedTeam || k.team,
+        days,
+        kaizenId: k.id,
+        kaizen: k,
+        bg: '#ede9fe', color: '#5b21b6', dot: '#8b5cf6',
+      })
+    }
+    // 🔴 7–13 days → Coordinator + Admin
+    else if (days >= 7 && (isCoordinator || isAdmin || isMD)) {
+      notifications.push({
+        id: `${k.id}-red`,
+        type: 'red',
+        title: '🔴 Idea Stuck Too Long',
+        message: `"${k.title}" in ${k.stage} for ${days} days`,
+        team: k.submittedTeam || k.team,
+        days,
+        kaizenId: k.id,
+        kaizen: k,
+        bg: '#fee2e2', color: '#dc2626', dot: '#ef4444',
+      })
+    }
+    // 🟡 3–6 days → Coordinator + Admin
+    else if (days >= 3 && (isCoordinator || isAdmin || isMD)) {
+      notifications.push({
+        id: `${k.id}-yellow`,
+        type: 'yellow',
+        title: '⏳ Idea Needs Attention',
+        message: `"${k.title}" in ${k.stage} for ${days} days`,
+        team: k.submittedTeam || k.team,
+        days,
+        kaizenId: k.id,
+        kaizen: k,
+        bg: '#fef9c3', color: '#92400e', dot: '#eab308',
+      })
+    }
+
+    // ✅ Stage moved — notify submitter
+    // Check if idea moved recently (within last 2 days) and user is submitter
+    if (isSubmitter && days === 0 && k.stage !== 'Submitted') {
+      notifications.push({
+        id: `${k.id}-moved`,
+        type: 'moved',
+        title: '✅ Your idea moved forward!',
+        message: `"${k.title}" is now in ${k.stage}`,
+        team: k.submittedTeam || k.team,
+        days: 0,
+        kaizenId: k.id,
+        kaizen: k,
+        bg: '#dcfce7', color: '#166534', dot: '#22c55e',
+      })
+    }
+  })
+
+  // Sort: md first, then red, yellow, moved
+  const order = { md: 0, red: 1, yellow: 2, moved: 3 }
+  return notifications.sort((a, b) => order[a.type] - order[b.type])
 }
 
 export const uploadImageToCloudinary = async (base64OrFile) => {
