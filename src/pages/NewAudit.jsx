@@ -235,36 +235,15 @@ const handleSubmit = () => {
 
   // ── Scorer validation (AuditIncharge / MD) ──────────────────────────
   if (canPutMarks) {
-    const answered = allKeys.filter(k => Number(scores[k]) > 0).length
-    if (answered === 0) {
+    // Must have entered at least one score (can't submit completely blank)
+    const hasAnyScore = allKeys.some(k =>
+      scores[k] !== undefined && scores[k] !== null && scores[k] !== ''
+    )
+    if (!hasAnyScore) {
       setAlertMsg('⚠️ No scores entered! Please score at least one item before submitting.')
       return
     }
-
-    // All items must have a score (no skipping)
-    const unanswered = allKeys.filter(k => scores[k] === undefined || scores[k] === null || scores[k] === '')
-    if (unanswered.length > 0) {
-      setAlertMsg(`⚠️ ${unanswered.length} item(s) have no score. Please score all items. Use 0 if not applicable.`)
-      return
-    }
-
-    // 0-score items must have a remark
-    const missingRemarks = getActiveLevels().flatMap(sLevel =>
-      (checklist[sLevel]?.items || []).map((item, idx) => {
-        const key = `${sLevel}_${idx}`
-        const val = Number(scores[key] || 0)
-        return val === 0 && !remarks[key]?.trim()
-          ? `${sLevel} Point ${idx + 1}: "${item.english.substring(0, 30)}..."`
-          : null
-      }).filter(Boolean)
-    )
-    if (missingRemarks.length > 0) {
-      setAlertMsg(
-        `⚠️ These 0-score points need a remark:\n${missingRemarks.slice(0, 3).join('\n')}` +
-        (missingRemarks.length > 3 ? `\n...and ${missingRemarks.length - 3} more` : '')
-      )
-      return
-    }
+    // Remarks on 0-score items are optional — no mandatory remark check
   }
 
   // ── Non-scorer validation (Coordinator, TeamLead, Auditor) ──────────
@@ -779,15 +758,15 @@ const handleSubmit = () => {
                           </div>
                         )}
 
-                        {/* Review/remark — always visible for canPutMarks, required when score is 0 or low */}
+                        {/* Review/remark — always visible for canPutMarks, remarks are optional */}
 {canPutMarks && (
   <div className="mt-2">
     <label className="text-xs font-bold mb-1 block"
-      style={{ color: val === 0 ? '#dc2626' : isLow ? '#d97706' : '#94a3b8' }}>
+      style={{ color: val === 0 ? '#d97706' : isLow ? '#d97706' : '#94a3b8' }}>
       {val === 0
-        ? '📝 Remark required for 0 score *'
+        ? '📝 Remark for 0 score (optional)'
         : isLow
-          ? '📝 Reason for low score (required)'
+          ? '📝 Reason for low score (optional)'
           : '📝 Remark (optional)'}
     </label>
     <input
@@ -795,7 +774,7 @@ const handleSubmit = () => {
       maxLength={200}
       placeholder={
         val === 0
-          ? 'Explain why score is 0 (required)...'
+          ? 'Add reason why score is 0 (optional)...'
           : isLow
             ? 'Reason for low score...'
             : 'Add any observation or comment...'
@@ -804,8 +783,8 @@ const handleSubmit = () => {
       onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
       className="w-full border-2 rounded-xl px-3 py-2 text-xs focus:outline-none"
       style={{
-        background: val === 0 ? '#fee2e2' : isLow ? '#fff7ed' : '#f8fafc',
-        borderColor: val === 0 ? '#fca5a5' : isLow ? '#fed7aa' : '#e2e8f0'
+        background: val === 0 ? '#fff7ed' : isLow ? '#fff7ed' : '#f8fafc',
+        borderColor: val === 0 ? '#fed7aa' : isLow ? '#fed7aa' : '#e2e8f0'
       }}
     />
     <p className="text-xs text-gray-400 text-right mt-0.5">
@@ -951,3 +930,4 @@ const handleSubmit = () => {
 }
 
 export default NewAudit
+
