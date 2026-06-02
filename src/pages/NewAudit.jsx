@@ -113,7 +113,7 @@ const NewAudit = () => {
   const [scores, setScores] = useState({})
   const [remarks, setRemarks] = useState({})
   const [beforePhotos, setBeforePhotos] = useState({})
-  const [submitted, setSubmitted] = useState(false) 
+  const [submitted, setSubmitted] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
   const [checklist, setChecklist] = useState(DEFAULT_CHECKLIST)
   const [alertMsg, setAlertMsg] = useState('')
@@ -122,13 +122,14 @@ const NewAudit = () => {
   const [completedLevels, setCompletedLevels] = useState([])
   const [showPrevScores, setShowPrevScores] = useState(false)
   const [prevAudits, setPrevAudits] = useState([])
-  const [activeCamera, setActiveCamera] = useState(null) // key like "1S_0"
+  const [activeCamera, setActiveCamera] = useState(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [yesNo, setYesNo] = useState({})
 
   const [allAudits, setAllAudits] = useState([])
   useEffect(() => {
-  getAudits().then(setAllAudits).catch(() => setAllAudits([]))
-}, [])
+    getAudits().then(setAllAudits).catch(() => setAllAudits([]))
+  }, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('masterChecklist')
@@ -152,35 +153,35 @@ const NewAudit = () => {
   }
 
   const checkSLevelCompletion = (level) => {
-  if (!teamName || !area) return true
-  const levelIdx = S_LEVELS.indexOf(level)
-  if (levelIdx === 0) return true
-  const prevLevel = S_LEVELS[levelIdx - 1]
-  return allAudits.some(a =>
-    a.teamName === teamName &&
-    (a.area === area || a.area === otherArea) &&
-    a.auditLevel === prevLevel
-  )
-}
-
-const getCompletedLevels = () => {
-  if (!teamName || !area) return []
-  return S_LEVELS.filter(s =>
-    allAudits.some(a =>
+    if (!teamName || !area) return true
+    const levelIdx = S_LEVELS.indexOf(level)
+    if (levelIdx === 0) return true
+    const prevLevel = S_LEVELS[levelIdx - 1]
+    return allAudits.some(a =>
       a.teamName === teamName &&
       (a.area === area || a.area === otherArea) &&
-      a.auditLevel === s
+      a.auditLevel === prevLevel
     )
-  )
-}
+  }
 
-const getPreviousAudits = (level) => {
-  return allAudits.filter(a =>
-    a.teamName === teamName &&
-    (a.area === area || a.area === otherArea) &&
-    a.auditLevel === level
-  ).slice(0, 3)
-}
+  const getCompletedLevels = () => {
+    if (!teamName || !area) return []
+    return S_LEVELS.filter(s =>
+      allAudits.some(a =>
+        a.teamName === teamName &&
+        (a.area === area || a.area === otherArea) &&
+        a.auditLevel === s
+      )
+    )
+  }
+
+  const getPreviousAudits = (level) => {
+    return allAudits.filter(a =>
+      a.teamName === teamName &&
+      (a.area === area || a.area === otherArea) &&
+      a.auditLevel === level
+    ).slice(0, 3)
+  }
 
   const handleLevelSelect = (level) => {
     const done = getCompletedLevels()
@@ -196,7 +197,6 @@ const getPreviousAudits = (level) => {
     if (prev.length > 0) setShowPrevScores(true)
   }
 
-  // Auto select 1S when area is selected and no audits done yet
   useEffect(() => {
     if (area && teamName) {
       const done = getCompletedLevels()
@@ -207,83 +207,78 @@ const getPreviousAudits = (level) => {
   }, [area, teamName, allAudits])
 
   const handlePhoto = async (sLevel, idx, e) => {
-  const files = Array.from(e.target.files)
-  if (!files.length) return
-  try {
-    const urls = await Promise.all(files.map(f => uploadImageToCloudinary(f)))
-    setBeforePhotos(p => ({
-      ...p,
-      [`${sLevel}_${idx}`]: [...(p[`${sLevel}_${idx}`] || []), ...urls]
-    }))
-  } catch (err) {
-    console.error('Upload failed:', err)
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    try {
+      const urls = await Promise.all(files.map(f => uploadImageToCloudinary(f)))
+      setBeforePhotos(p => ({
+        ...p,
+        [`${sLevel}_${idx}`]: [...(p[`${sLevel}_${idx}`] || []), ...urls]
+      }))
+    } catch (err) {
+      console.error('Upload failed:', err)
+    }
   }
-}
 
   const finalAuditorName = isOtherAuditor ? customAuditorName : auditorName
   const finalDesignation = isOtherAuditor ? customDesignation : auditorDesignation
 
-const handleSubmit = () => {
-  if (!area) { setAlertMsg('Please select a department!'); return }
-  if (!auditLevel) { setAlertMsg('Please select audit level!'); return }
-  if (!teamName) { setAlertMsg('Please select a team!'); return }
-  if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
+  const handleSubmit = () => {
+    if (!area) { setAlertMsg('Please select a department!'); return }
+    if (!auditLevel) { setAlertMsg('Please select audit level!'); return }
+    if (!teamName) { setAlertMsg('Please select a team!'); return }
+    if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
 
-  const allKeys = getActiveLevels().flatMap(sLevel =>
-    (checklist[sLevel]?.items || []).map((_, idx) => `${sLevel}_${idx}`)
-  )
-
-  // ── Scorer validation (AuditIncharge / MD) ──────────────────────────
-  if (canPutMarks) {
-    // Must have entered at least one score (can't submit completely blank)
-    const hasAnyScore = allKeys.some(k =>
-      scores[k] !== undefined && scores[k] !== null && scores[k] !== ''
+    const allKeys = getActiveLevels().flatMap(sLevel =>
+      (checklist[sLevel]?.items || []).map((_, idx) => `${sLevel}_${idx}`)
     )
-    if (!hasAnyScore) {
-      setAlertMsg('⚠️ No scores entered! Please score at least one item before submitting.')
-      return
+
+    if (canPutMarks) {
+      const hasAnyScore = allKeys.some(k =>
+        scores[k] !== undefined && scores[k] !== null && scores[k] !== ''
+      )
+      if (!hasAnyScore) {
+        setAlertMsg('⚠️ No scores entered! Please score at least one item before submitting.')
+        return
+      }
     }
-    // Remarks on 0-score items are optional — no mandatory remark check
-  }
 
-  // ── Non-scorer validation (Coordinator, TeamLead, Auditor) ──────────
-  if (!canPutMarks && canAudit) {
-    const hasPhotos = allKeys.some(k => (beforePhotos[k] || []).length > 0)
-    const hasRemarks = allKeys.some(k => remarks[k]?.trim())
-
-    if (!hasPhotos && !hasRemarks) {
-      setAlertMsg('⚠️ Please add at least one photo or observation before submitting.')
-      return
+    if (!canPutMarks && canAudit) {
+      const hasPhotos = allKeys.some(k => (beforePhotos[k] || []).length > 0)
+      const hasRemarks = allKeys.some(k => remarks[k]?.trim())
+      if (!hasPhotos && !hasRemarks) {
+        setAlertMsg('⚠️ Please add at least one photo or observation before submitting.')
+        return
+      }
     }
-  }
 
-  setPreviewMode(true)
-}
+    setPreviewMode(true)
+  }
 
   const doSubmit = async () => {
-  setShowConfirm(false)
-  const audit = {
-    area: area === 'Others' ? otherArea : area,
-    auditLevel, teamName,
-    auditorName: finalAuditorName,
-    auditorDesignation: finalDesignation,
-    auditDate, scores, remarks,
-    beforePhotos: beforePhotos,
-    scoredMarks: getScoredMarks(),
-    totalMarks: getTotalMarks(),
-    scorePercent: getScorePercent(),
-    submittedBy: user?.name,
-    date: new Date(auditDate).toLocaleDateString(),
-    timestamp: new Date().toISOString(),
+    setShowConfirm(false)
+    const audit = {
+      area: area === 'Others' ? otherArea : area,
+      auditLevel, teamName,
+      auditorName: finalAuditorName,
+      auditorDesignation: finalDesignation,
+      auditDate, scores, remarks,
+      beforePhotos: beforePhotos,
+      scoredMarks: getScoredMarks(),
+      totalMarks: getTotalMarks(),
+      scorePercent: getScorePercent(),
+      submittedBy: user?.name,
+      date: new Date(auditDate).toLocaleDateString(),
+      timestamp: new Date().toISOString(),
+    }
+    try {
+      await saveAudit(audit)
+      setPreviewMode(false)
+      setSubmitted(true)
+    } catch (err) {
+      setAlertMsg('❌ Failed to save. Check your internet connection and try again.')
+    }
   }
-  try {
-    await saveAudit(audit)
-    setPreviewMode(false)
-    setSubmitted(true)
-  } catch (err) {
-    setAlertMsg('❌ Failed to save. Check your internet connection and try again.')
-  }
-}
 
   const resetForm = () => {
     setStep(1); setArea(''); setOtherArea(''); setAuditLevel('')
@@ -295,6 +290,7 @@ const handleSubmit = () => {
     setCustomAuditorName(''); setCustomDesignation('')
     setAuditDate(new Date().toISOString().split('T')[0])
     setAlertMsg('')
+    setYesNo({})
   }
 
   const getColor = s => s >= 80 ? '#16a34a' : s >= 60 ? '#d97706' : '#dc2626'
@@ -302,86 +298,69 @@ const handleSubmit = () => {
 
   if (previewMode) {
     return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
-      <Navbar />
+      <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
+        <Navbar />
+        <div className="p-4 max-w-2xl mx-auto">
 
-      <div className="p-4 max-w-2xl mx-auto">
-
-        <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <h2 className="text-xl font-black text-gray-800 mb-3">
-            📋 Audit Preview
-          </h2>
-
-          <div className="space-y-2 text-sm">
-            <p><span className="font-black">Department:</span> {area}</p>
-            <p><span className="font-black">Audit Level:</span> {auditLevel}</p>
-            <p><span className="font-black">Team:</span> {teamName}</p>
-            <p><span className="font-black">Auditor:</span> {finalAuditorName}</p>
-            <p><span className="font-black">Score:</span> {getScoredMarks()} / {getTotalMarks()}</p>
+          <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <h2 className="text-xl font-black text-gray-800 mb-3">
+              📋 Audit Preview
+            </h2>
+            <div className="space-y-2 text-sm">
+              <p><span className="font-black">Department:</span> {area}</p>
+              <p><span className="font-black">Audit Level:</span> {auditLevel}</p>
+              <p><span className="font-black">Team:</span> {teamName}</p>
+              <p><span className="font-black">Auditor:</span> {finalAuditorName}</p>
+              <p><span className="font-black">Score:</span> {getScoredMarks()} / {getTotalMarks()}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-
-          {Object.keys(scores).map(key => {
-
-            const score = scores[key]
-            const remark = remarks[key]
-            const photo = beforePhotos[key]
-
-            if (!score) return null
-
-            return (
-              <div key={key} className="bg-white rounded-2xl shadow-sm p-4">
-
-                <div className="flex justify-between mb-2">
-                  <p className="font-bold text-sm">{key}</p>
-                  <p className="font-black text-blue-700">{score}</p>
-                </div>
-
-                {remark && (
-                  <p className="text-xs text-orange-600 mb-2">
-                    {remark}
-                  </p>
-                )}
-
-                {photo && Array.isArray(photo) && photo.length > 0 && (
-                  <div className="flex gap-2 flex-wrap mt-2">
-                    {photo.map((url, i) => (
-                      <img key={i} src={url} alt=""
-                        className="w-20 h-20 object-cover rounded-xl" />
+          <div className="space-y-4">
+            {Object.keys(scores).map(key => {
+              const score = scores[key]
+              const remark = remarks[key]
+              const photo = beforePhotos[key]
+              if (!score) return null
+              return (
+                <div key={key} className="bg-white rounded-2xl shadow-sm p-4">
+                  <div className="flex justify-between mb-2">
+                    <p className="font-bold text-sm">{key}</p>
+                    <p className="font-black text-blue-700">{score}</p>
+                  </div>
+                  {remark && (
+                    <p className="text-xs text-orange-600 mb-2">{remark}</p>
+                  )}
+                  {photo && Array.isArray(photo) && photo.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      {photo.map((url, i) => (
+                        <img key={i} src={url} alt=""
+                          className="w-20 h-20 object-cover rounded-xl" />
                       ))}
-                   </div>
-                )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
 
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="flex gap-3 mt-4 mb-8">
-
-          <button
-            onClick={() => setPreviewMode(false)}
-            className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black">
-            ← Back
-          </button>
-
-          <button
-            onClick={doSubmit}          
-            className="flex-1 text-white py-4 rounded-2xl font-black"
-            style={{
-              background: 'linear-gradient(135deg, #1e3a5f, #1e40af)'
-            }}>
-            Confirm Submit ✅
-          </button>
+          <div className="flex gap-3 mt-4 mb-8">
+            <button
+              onClick={() => setPreviewMode(false)}
+              className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black">
+              ← Back
+            </button>
+            <button
+              onClick={doSubmit}
+              className="flex-1 text-white py-4 rounded-2xl font-black"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+              Confirm Submit ✅
+            </button>
+          </div>
 
         </div>
-
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   if (submitted) {
     const pct = getScorePercent()
@@ -433,23 +412,23 @@ const handleSubmit = () => {
             </div>
           )}
 
-          {/* Auditor + Date — locked to login user and today */}
-<div className="bg-white rounded-2xl shadow-sm px-4 py-3 mb-3 flex items-center justify-between">
-  <div className="flex items-center gap-3">
-    <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
-      style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
-      {user?.name?.[0]}
-    </div>
-    <div>
-      <p className="text-sm font-black text-gray-800">{user?.name}</p>
-      <p className="text-xs text-gray-400">{user?.designation}</p>
-    </div>
-  </div>
-  <div className="text-right">
-    <p className="text-xs font-black text-gray-700">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-    <p className="text-xs text-gray-400">Today</p>
-  </div>
-</div>
+          {/* Auditor + Date */}
+          <div className="bg-white rounded-2xl shadow-sm px-4 py-3 mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                {user?.name?.[0]}
+              </div>
+              <div>
+                <p className="text-sm font-black text-gray-800">{user?.name}</p>
+                <p className="text-xs text-gray-400">{user?.designation}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-black text-gray-700">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+              <p className="text-xs text-gray-400">Today</p>
+            </div>
+          </div>
 
           {/* Team */}
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">
@@ -468,7 +447,7 @@ const handleSubmit = () => {
             </div>
           </div>
 
-          {/* Department -- filtered by team */}
+          {/* Department */}
           {teamName && (
             <div className="bg-white rounded-2xl shadow-sm p-4 mb-3">
               <label className="block text-xs font-black text-gray-600 uppercase mb-3">
@@ -498,7 +477,6 @@ const handleSubmit = () => {
             <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
               <label className="block text-xs font-black text-gray-600 uppercase mb-3">Select Audit Level *</label>
 
-              {/* Previous S level scores */}
               {getCompletedLevels().length > 0 && (
                 <div className="mb-3 rounded-xl p-3" style={{ background: '#f0fdf4' }}>
                   <p className="text-xs font-black text-green-700 mb-2">✅ Completed Levels for {area}:</p>
@@ -641,6 +619,7 @@ const handleSubmit = () => {
       <Navbar />
       <div className="p-4 max-w-2xl mx-auto">
 
+        {/* Sticky header */}
         <div className="bg-white rounded-2xl shadow-sm p-3 mb-4 flex items-center justify-between sticky top-16 z-10">
           <div>
             <p className="font-black text-gray-800 text-sm">{area === 'Others' ? otherArea : area}</p>
@@ -648,8 +627,7 @@ const handleSubmit = () => {
           </div>
           <div className="flex items-center gap-2">
             <div className="text-center">
-              <p className="font-black text-lg"
-                style={{ color: getColor(getScorePercent()) }}>
+              <p className="font-black text-lg" style={{ color: getColor(getScorePercent()) }}>
                 {getScorePercent()}%
               </p>
               <p className="text-xs text-gray-400">{getScoredMarks()}/{getTotalMarks()}</p>
@@ -670,8 +648,12 @@ const handleSubmit = () => {
                 <span className="text-3xl">📋</span>
                 <p className="text-base font-black text-gray-800">Submit Audit?</p>
               </div>
-              <p className="text-sm text-gray-500 mb-1">Score: <span className="font-black" style={{ color: getColor(getScorePercent()) }}>{getScorePercent()}%</span></p>
-              <p className="text-xs text-gray-400 mb-5">{getScoredMarks()} / {getTotalMarks()} marks · {auditLevel} · {area === 'Others' ? otherArea : area}</p>
+              <p className="text-sm text-gray-500 mb-1">
+                Score: <span className="font-black" style={{ color: getColor(getScorePercent()) }}>{getScorePercent()}%</span>
+              </p>
+              <p className="text-xs text-gray-400 mb-5">
+                {getScoredMarks()} / {getTotalMarks()} marks · {auditLevel} · {area === 'Others' ? otherArea : area}
+              </p>
               <div className="flex gap-3">
                 <button onClick={() => setShowConfirm(false)}
                   className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-sm">
@@ -687,16 +669,20 @@ const handleSubmit = () => {
           </div>
         )}
 
+        {/* Checklist */}
         <div className="space-y-4">
           {getActiveLevels().map(sLevel => {
             const info = checklist[sLevel]
             return (
               <div key={sLevel} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+
+                {/* S Level header */}
                 <div className="px-4 py-3 flex items-center gap-2" style={{ background: info.color }}>
                   <span className="text-white font-black">{sLevel}</span>
                   <span className="text-white font-semibold text-sm">{info.label}</span>
                   <span className="ml-auto text-white text-xs opacity-80">{info.totalMarks} marks</span>
                 </div>
+
                 <div className="divide-y divide-gray-50">
                   {info.items.map((item, idx) => {
                     const key = `${sLevel}_${idx}`
@@ -705,8 +691,10 @@ const handleSubmit = () => {
                     const isLow = val < item.marks * 0.6 && val > 0
                     return (
                       <div key={idx} className="p-4">
+
+                        {/* ── Title row ── */}
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-800 font-semibold leading-snug">
                               <span className="text-gray-400 text-xs font-black mr-1">{idx + 1}.</span>
                               {lang === 'ta' && item.tamil ? item.tamil : item.english}
@@ -721,6 +709,30 @@ const handleSubmit = () => {
                           </span>
                         </div>
 
+                        {/* ── Yes / No row ── */}
+                        <div className="flex items-center gap-2 ml-4 mb-2">
+                          <span className="text-xs text-gray-400 font-semibold">Followed?</span>
+                          <button
+                            type="button"
+                            onClick={() => setYesNo(p => ({ ...p, [key]: yesNo[key] === 'yes' ? null : 'yes' }))}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border-2 transition-all"
+                            style={yesNo[key] === 'yes'
+                              ? { background: '#dcfce7', borderColor: '#16a34a', color: '#15803d' }
+                              : { background: '#f8fafc', borderColor: '#e2e8f0', color: '#94a3b8' }}>
+                            ✓ Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setYesNo(p => ({ ...p, [key]: yesNo[key] === 'no' ? null : 'no' }))}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border-2 transition-all"
+                            style={yesNo[key] === 'no'
+                              ? { background: '#fee2e2', borderColor: '#dc2626', color: '#dc2626' }
+                              : { background: '#f8fafc', borderColor: '#e2e8f0', color: '#94a3b8' }}>
+                            ✕ No
+                          </button>
+                        </div>
+
+                        {/* ── Score slider — canPutMarks only ── */}
                         {canPutMarks ? (
                           <div className="mt-2">
                             <div className="flex items-center gap-3 mb-1">
@@ -758,131 +770,130 @@ const handleSubmit = () => {
                           </div>
                         )}
 
-                        {/* Review/remark — always visible for canPutMarks, remarks are optional */}
-{canPutMarks && (
-  <div className="mt-2">
-    <label className="text-xs font-bold mb-1 block"
-      style={{ color: val === 0 ? '#d97706' : isLow ? '#d97706' : '#94a3b8' }}>
-      {val === 0
-        ? '📝 Remark for 0 score (optional)'
-        : isLow
-          ? '📝 Reason for low score (optional)'
-          : '📝 Remark (optional)'}
-    </label>
-    <input
-      type="text"
-      maxLength={200}
-      placeholder={
-        val === 0
-          ? 'Add reason why score is 0 (optional)...'
-          : isLow
-            ? 'Reason for low score...'
-            : 'Add any observation or comment...'
-      }
-      value={remarks[key] || ''}
-      onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
-      className="w-full border-2 rounded-xl px-3 py-2 text-xs focus:outline-none"
-      style={{
-        background: val === 0 ? '#fff7ed' : isLow ? '#fff7ed' : '#f8fafc',
-        borderColor: val === 0 ? '#fed7aa' : isLow ? '#fed7aa' : '#e2e8f0'
-      }}
-    />
-    <p className="text-xs text-gray-400 text-right mt-0.5">
-      {(remarks[key] || '').length}/200
-    </p>
-  </div>
-)}
+                        {/* ── Remark — canPutMarks ── */}
+                        {canPutMarks && (
+                          <div className="mt-2">
+                            <label className="text-xs font-bold mb-1 block"
+                              style={{ color: val === 0 ? '#d97706' : isLow ? '#d97706' : '#94a3b8' }}>
+                              {val === 0
+                                ? '📝 Remark for 0 score (optional)'
+                                : isLow
+                                  ? '📝 Reason for low score (optional)'
+                                  : '📝 Remark (optional)'}
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={200}
+                              placeholder={
+                                val === 0
+                                  ? 'Add reason why score is 0 (optional)...'
+                                  : isLow
+                                    ? 'Reason for low score...'
+                                    : 'Add any observation or comment...'
+                              }
+                              value={remarks[key] || ''}
+                              onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
+                              className="w-full border-2 rounded-xl px-3 py-2 text-xs focus:outline-none"
+                              style={{
+                                background: val === 0 ? '#fff7ed' : isLow ? '#fff7ed' : '#f8fafc',
+                                borderColor: val === 0 ? '#fed7aa' : isLow ? '#fed7aa' : '#e2e8f0'
+                              }}
+                            />
+                            <p className="text-xs text-gray-400 text-right mt-0.5">
+                              {(remarks[key] || '').length}/200
+                            </p>
+                          </div>
+                        )}
 
-{/* Remark for non-scorers (Coordinator, TeamLead, Auditor) */}
-{!canPutMarks && canAudit && (
-  <div className="mt-2">
-    <label className="text-xs font-bold text-gray-400 mb-1 block">
-      📝 Your Observation (optional)
-    </label>
-    <input
-      type="text"
-      maxLength={200}
-      placeholder="Add your observation or comment..."
-      value={remarks[key] || ''}
-      onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
-      className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50"
-    />
-  </div>
-)}
+                        {/* ── Remark — non-scorers ── */}
+                        {!canPutMarks && canAudit && (
+                          <div className="mt-2">
+                            <label className="text-xs font-bold text-gray-400 mb-1 block">
+                              📝 Your Observation (optional)
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={200}
+                              placeholder="Add your observation or comment..."
+                              value={remarks[key] || ''}
+                              onChange={e => setRemarks(p => ({ ...p, [key]: e.target.value }))}
+                              className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-xs focus:outline-none bg-gray-50"
+                            />
+                          </div>
+                        )}
 
+                        {/* ── Photos ── */}
                         {canAudit && (
-  <div className="mt-3">
-    <p className="text-xs font-bold text-gray-500 mb-2">📸 Current State</p>
+                          <div className="mt-3">
+                            <p className="text-xs font-bold text-gray-500 mb-2">📸 Current State</p>
 
-    {/* Show existing photos */}
-    {(beforePhotos[key] || []).length > 0 && (
-      <div className="flex gap-2 flex-wrap mb-2">
-        {(beforePhotos[key] || []).map((url, photoIdx) => (
-          <div key={photoIdx} className="relative w-20 h-20">
-            <img
-              src={url}
-              alt={`photo ${photoIdx + 1}`}
-              className="w-20 h-20 object-cover rounded-xl cursor-pointer"
-              onClick={() => setPreviewImg(url)}
-            />
-            {/* Delete individual photo */}
-            <button
-              onClick={() => setBeforePhotos(p => ({
-                ...p,
-                [key]: p[key].filter((_, i) => i !== photoIdx)
-              }))}
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-              ×
-            </button>
-            {/* Preview */}
-            <button
-              onClick={() => setPreviewImg(url)}
-              className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
-              🔍
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
+                            {(beforePhotos[key] || []).length > 0 && (
+                              <div className="flex gap-2 flex-wrap mb-2">
+                                {(beforePhotos[key] || []).map((url, photoIdx) => (
+                                  <div key={photoIdx} className="relative w-20 h-20">
+                                    <img
+                                      src={url}
+                                      alt={`photo ${photoIdx + 1}`}
+                                      className="w-20 h-20 object-cover rounded-xl cursor-pointer"
+                                      onClick={() => setPreviewImg(url)}
+                                    />
+                                    <button
+                                      onClick={() => setBeforePhotos(p => ({
+                                        ...p,
+                                        [key]: p[key].filter((_, i) => i !== photoIdx)
+                                      }))}
+                                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                                      ×
+                                    </button>
+                                    <button
+                                      onClick={() => setPreviewImg(url)}
+                                      className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                                      🔍
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
-    {/* Always show add more buttons */}
-    <div className="grid grid-cols-2 gap-2">
-      <button type="button"
-        onClick={() => setActiveCamera(key)}
-        className="h-14 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
-        style={{ background: '#eff6ff' }}>
-        <span className="text-base">📷</span>
-        <span className="text-xs text-blue-600 font-black">
-          {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Camera'}
-        </span>
-      </button>
-      <label className="h-14 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400"
-        style={{ background: '#f8fafc' }}>
-        <span className="text-base">🖼️</span>
-        <span className="text-xs text-gray-400">
-          {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Gallery'}
-        </span>
-        <input type="file" accept="image/*,video/*" multiple className="hidden"
-          onChange={e => handlePhoto(sLevel, idx, e)} />
-      </label>
-    </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button type="button"
+                                onClick={() => setActiveCamera(key)}
+                                className="h-14 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
+                                style={{ background: '#eff6ff' }}>
+                                <span className="text-base">📷</span>
+                                <span className="text-xs text-blue-600 font-black">
+                                  {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Camera'}
+                                </span>
+                              </button>
+                              <label className="h-14 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400"
+                                style={{ background: '#f8fafc' }}>
+                                <span className="text-base">🖼️</span>
+                                <span className="text-xs text-gray-400">
+                                  {(beforePhotos[key] || []).length > 0 ? '+ Add More' : 'Gallery'}
+                                </span>
+                                <input type="file" accept="image/*,video/*" multiple className="hidden"
+                                  onChange={e => handlePhoto(sLevel, idx, e)} />
+                              </label>
+                            </div>
 
-    {/* Photo count */}
-    {(beforePhotos[key] || []).length > 0 && (
-      <p className="text-xs text-gray-400 mt-1 text-right">
-        {(beforePhotos[key] || []).length} photo(s) added
-      </p>
-    )}
-  </div>
-)}
+                            {(beforePhotos[key] || []).length > 0 && (
+                              <p className="text-xs text-gray-400 mt-1 text-right">
+                                {(beforePhotos[key] || []).length} photo(s) added
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                       </div>
                     )
                   })}
                 </div>
+
               </div>
             )
           })}
         </div>
+
         {/* Image Preview Modal */}
         {previewImg && (
           <div className="fixed inset-0 z-50 flex items-center justify-center"
@@ -900,6 +911,7 @@ const handleSubmit = () => {
           </div>
         )}
 
+        {/* Submit button */}
         {canAudit && (
           <button type="button" onClick={handleSubmit}
             className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg mt-4 mb-8"
@@ -907,27 +919,30 @@ const handleSubmit = () => {
             Submit Audit ✅
           </button>
         )}
+
       </div>
 
-      {/* ── Real-time Camera Modal ── */}
-      {activeCamera && <CameraModal
-        onCapture={async dataUrl => {
-          try {
-            const url = await uploadImageToCloudinary(dataUrl)
-            setBeforePhotos(p => ({
-              ...p,
-               [activeCamera]: [...(p[activeCamera] || []), url]
-            }))
-          } catch (err) {
-             console.error('Upload failed:', err)
-          }
-          setActiveCamera(null)
-        }}
-        onClose={() => setActiveCamera(null)}
-      />}
+      {/* Camera Modal */}
+      {activeCamera && (
+        <CameraModal
+          onCapture={async dataUrl => {
+            try {
+              const url = await uploadImageToCloudinary(dataUrl)
+              setBeforePhotos(p => ({
+                ...p,
+                [activeCamera]: [...(p[activeCamera] || []), url]
+              }))
+            } catch (err) {
+              console.error('Upload failed:', err)
+            }
+            setActiveCamera(null)
+          }}
+          onClose={() => setActiveCamera(null)}
+        />
+      )}
+
     </div>
   )
 }
 
 export default NewAudit
-
