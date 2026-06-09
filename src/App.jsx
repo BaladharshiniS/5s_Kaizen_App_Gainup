@@ -14,6 +14,7 @@ import Organogram from './pages/Organogram'
 import MDView from './pages/MD_View'
 import MyIdeas from './pages/MyIdeas'
 import TeamPerformance from './pages/TeamPerformance'
+import AuditCalendar from './pages/AuditCalendar'
 
 export const LangContext = createContext('en')
 export const useLang = () => useContext(LangContext)
@@ -52,6 +53,7 @@ function App() {
           <Route path="/my-ideas" element={<ProtectedRoute><MyIdeas /></ProtectedRoute>} />
           <Route path="/md-view" element={<ProtectedRoute><MDView /></ProtectedRoute>} />
           <Route path="/team-performance" element={<ProtectedRoute><TeamPerformance /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute><AuditCalendar /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </LangContext.Provider>

@@ -175,12 +175,12 @@ export const TEAMS_DEPARTMENTS = {
   'Royal Lions': ['Trim Store', 'Fabric Store'],
   'Dragon Force': ['Cutting', 'Super Market', 'I/CAD'],
   'Golden Tiger': ['Line 1-11', 'Line 12-22'],
-  'Golden Eagle': ['Line 23-28', 'Line 29-33'],
-  'Bison Warriors': ['Line 34-38', 'Line 39-44'],
+  'Golden Eagle': ['Line 23-28', 'Line 29-35'],
+  'Bison Warriors': ['Line 36-39', 'Line 40-44'],
   'Penguins': ['Pattern', 'Sampling'],
   'Phoenix Squad': ['Electric', 'Maintenance'],
   'Storm Blades': ['Security Gate', 'Canteen', 'Staff Tables'],
-  'Spartan Kings': ['Passing-1', 'Passing-2', 'FGS/Non-FG'],
+  'Spartan Kings': ['Packing-1', 'Packing-2', 'FGS/Non-FG'],
 }
 
 export const TEAMS_MEMBERS = {
@@ -330,8 +330,6 @@ export const getNotifications = async (user) => {
 
   kaizens.forEach(k => {
     if (k.stage === 'Closed') return
-
-    // Days stuck in current stage
     const stageDate = k.timestamps?.[k.stage]
     if (!stageDate) return
     const entered = new Date(stageDate)
@@ -343,69 +341,111 @@ export const getNotifications = async (user) => {
     const isAdmin = user?.role === 'Admin'
     const isSubmitter = k.submittedBy === user?.name || k.submittedBy === user?.email
 
-    // 🚨 14+ days → MD + Admin + Coordinator
     if (days >= 14 && (isMD || isAdmin || isCoordinator)) {
       notifications.push({
-        id: `${k.id}-md`,
-        type: 'md',
-        title: '🚨 MD Attention Required',
+        id: `${k.id}-md`, type: 'md', title: '🚨 MD Attention Required',
         message: `"${k.title}" stuck in ${k.stage} for ${days} days`,
-        team: k.submittedTeam || k.team,
-        days,
-        kaizenId: k.id,
-        kaizen: k,
+        team: k.submittedTeam || k.team, days, kaizenId: k.id, kaizen: k,
         bg: '#ede9fe', color: '#5b21b6', dot: '#8b5cf6',
       })
-    }
-    // 🔴 7–13 days → Coordinator + Admin
-    else if (days >= 7 && (isCoordinator || isAdmin || isMD)) {
+    } else if (days >= 7 && (isCoordinator || isAdmin || isMD)) {
       notifications.push({
-        id: `${k.id}-red`,
-        type: 'red',
-        title: '🔴 Idea Stuck Too Long',
+        id: `${k.id}-red`, type: 'red', title: '🔴 Idea Stuck Too Long',
         message: `"${k.title}" in ${k.stage} for ${days} days`,
-        team: k.submittedTeam || k.team,
-        days,
-        kaizenId: k.id,
-        kaizen: k,
+        team: k.submittedTeam || k.team, days, kaizenId: k.id, kaizen: k,
         bg: '#fee2e2', color: '#dc2626', dot: '#ef4444',
       })
-    }
-    // 🟡 3–6 days → Coordinator + Admin
-    else if (days >= 3 && (isCoordinator || isAdmin || isMD)) {
+    } else if (days >= 3 && (isCoordinator || isAdmin || isMD)) {
       notifications.push({
-        id: `${k.id}-yellow`,
-        type: 'yellow',
-        title: '⏳ Idea Needs Attention',
+        id: `${k.id}-yellow`, type: 'yellow', title: '⏳ Idea Needs Attention',
         message: `"${k.title}" in ${k.stage} for ${days} days`,
-        team: k.submittedTeam || k.team,
-        days,
-        kaizenId: k.id,
-        kaizen: k,
+        team: k.submittedTeam || k.team, days, kaizenId: k.id, kaizen: k,
         bg: '#fef9c3', color: '#92400e', dot: '#eab308',
       })
     }
 
-    // ✅ Stage moved — notify submitter
-    // Check if idea moved recently (within last 2 days) and user is submitter
     if (isSubmitter && days === 0 && k.stage !== 'Submitted') {
       notifications.push({
-        id: `${k.id}-moved`,
-        type: 'moved',
-        title: '✅ Your idea moved forward!',
+        id: `${k.id}-moved`, type: 'moved', title: '✅ Your idea moved forward!',
         message: `"${k.title}" is now in ${k.stage}`,
-        team: k.submittedTeam || k.team,
-        days: 0,
-        kaizenId: k.id,
-        kaizen: k,
+        team: k.submittedTeam || k.team, days: 0, kaizenId: k.id, kaizen: k,
         bg: '#dcfce7', color: '#166534', dot: '#22c55e',
       })
     }
   })
 
-  // Sort: md first, then red, yellow, moved
   const order = { md: 0, red: 1, yellow: 2, moved: 3 }
-  return notifications.sort((a, b) => order[a.type] - order[b.type])
+
+  // ✅ Fetch schedules and reschedules ONCE outside any forEach
+  const schedulesRef = ref(db, 'schedules')
+  const schedSnap = await get(schedulesRef)
+
+  const reschedRef = ref(db, 'reschedules')
+  const reschedSnap = await get(reschedRef)
+  const reschedList = reschedSnap.exists() ? Object.values(reschedSnap.val()) : []
+
+  if (schedSnap.exists()) {
+    const schedules = Object.values(schedSnap.val())
+    const today2 = new Date().toISOString().split('T')[0]
+
+    schedules.forEach(s => {
+      if (s.status === 'completed') return
+      const schedDate = new Date(s.date)
+      const daysAway = Math.floor((schedDate - now) / (1000 * 60 * 60 * 24))
+
+      if (daysAway === 3 || daysAway === 1) {
+        const isRelevant =
+          ['AuditIncharge','Admin','MD','Coordinator'].includes(user?.role) ||
+          (user?.role === 'TeamLead' && (user?.team === s.auditing || user?.team === s.beingAudited))
+        if (isRelevant) {
+          notifications.push({
+            id: `sched-${s.id || s.date}`,
+            type: 'schedule',
+            title: daysAway === 1 ? '🔔 Audit Tomorrow!' : '📅 Audit in 3 Days',
+            message: `${s.auditing} audits ${s.beingAudited}`,
+            team: s.auditing, days: daysAway,
+            bg: '#eff6ff', color: '#1e40af', dot: '#3b82f6',
+          })
+        }
+      }
+
+      if (s.date < today2 && s.status !== 'completed') {
+        const isMissedRelevant =
+          ['AuditIncharge','Admin','MD'].includes(user?.role) ||
+          (user?.role === 'TeamLead' && (user?.team === s.auditing || user?.team === s.beingAudited))
+        if (isMissedRelevant) {
+          notifications.push({
+            id: `missed-${s.id || s.date}`,
+            type: 'missed',
+            title: '🔴 Audit Missed!',
+            message: `${s.auditing} was supposed to audit ${s.beingAudited}`,
+            team: s.auditing, days: 0,
+            bg: '#fee2e2', color: '#dc2626', dot: '#ef4444',
+          })
+        }
+      }
+    })
+  }
+
+  // ✅ Reschedule notifications — fetched once above, used here
+  reschedList.forEach(r => {
+    const isRelevant =
+      ['AuditIncharge', 'Admin', 'MD'].includes(user?.role) ||
+      (user?.role === 'TeamLead' &&
+        (user?.team === r.auditing || user?.team === r.beingAudited))
+    if (isRelevant) {
+      notifications.push({
+        id: `resched-${r.id}`,
+        type: 'reschedule',
+        title: '🔄 Audit Rescheduled',
+        message: `${r.auditing} → ${r.beingAudited} moved to ${r.newDate}`,
+        team: r.auditing, days: 0,
+        bg: '#fef9c3', color: '#92400e', dot: '#f59e0b',
+      })
+    }
+  })
+
+  return notifications.sort((a, b) => (order[a.type] ?? 99) - (order[b.type] ?? 99))
 }
 
 export const uploadImageToCloudinary = async (base64OrFile) => {
@@ -430,4 +470,130 @@ export const uploadImageToCloudinary = async (base64OrFile) => {
   )
   const data = await response.json()
   return data.secure_url
+}
+
+// Save audit schedule
+export const saveSchedule = async (scheduleData) => {
+  const schedRef = ref(db, 'schedules')
+  const newRef = push(schedRef)
+  await set(newRef, { ...scheduleData, id: newRef.key })
+  return newRef.key
+}
+
+// Get all schedules
+export const getSchedules = async () => {
+  const schedRef = ref(db, 'schedules')
+  const snapshot = await get(schedRef)
+  if (!snapshot.exists()) return []
+  return Object.values(snapshot.val())
+}
+
+// Listen schedules real-time
+export const listenSchedules = (callback) => {
+  const schedRef = ref(db, 'schedules')
+  return onValue(schedRef, (snapshot) => {
+    if (!snapshot.exists()) { callback([]); return }
+    callback(Object.values(snapshot.val()))
+  })
+}
+
+// Save external audit date
+export const saveExternalAudit = async (data) => {
+  const extRef = ref(db, 'externalAudits')
+  const newRef = push(extRef)
+  await set(newRef, { ...data, id: newRef.key })
+  return newRef.key
+}
+
+// Get external audits
+export const getExternalAudits = async () => {
+  const extRef = ref(db, 'externalAudits')
+  const snapshot = await get(extRef)
+  if (!snapshot.exists()) return []
+  return Object.values(snapshot.val())
+}
+
+// Save organogram teams
+export const saveOrganogram = async (teamsData) => {
+  const orgRef = ref(db, 'organogram')
+  await set(orgRef, teamsData)
+}
+
+// Get organogram teams
+export const getOrganogram = async () => {
+  const orgRef = ref(db, 'organogram')
+  const snapshot = await get(orgRef)
+  if (!snapshot.exists()) return null
+  return snapshot.val()
+}
+
+// Listen organogram real-time
+export const listenOrganogram = (callback) => {
+  const orgRef = ref(db, 'organogram')
+  return onValue(orgRef, (snapshot) => {
+    if (!snapshot.exists()) { callback(null); return }
+    callback(snapshot.val())
+  })
+}
+
+// Save Krishnan schedule
+export const saveKrishnanSchedule = async (scheduleData) => {
+  const ref2 = ref(db, 'krishnanSchedule')
+  const newRef = push(ref2)
+  await set(newRef, { ...scheduleData, id: newRef.key })
+  return newRef.key
+}
+
+// Get Krishnan schedule
+export const getKrishnanSchedule = async () => {
+  const ref2 = ref(db, 'krishnanSchedule')
+  const snapshot = await get(ref2)
+  if (!snapshot.exists()) return []
+  return Object.values(snapshot.val())
+}
+
+// Listen Krishnan schedule
+export const listenKrishnanSchedule = (callback) => {
+  const ref2 = ref(db, 'krishnanSchedule')
+  return onValue(ref2, (snapshot) => {
+    if (!snapshot.exists()) { callback([]); return }
+    callback(Object.values(snapshot.val()))
+  })
+}
+
+// Update schedule status
+export const updateScheduleStatus = async (id, status) => {
+  const schedRef = ref(db, `schedules/${id}`)
+  await update(schedRef, { status })
+}
+
+// Save reschedule
+export const saveReschedule = async (data) => {
+  const reschedRef = ref(db, 'reschedules')
+  const newRef = push(reschedRef)
+  await set(newRef, { ...data, id: newRef.key })
+  return newRef.key
+}
+
+// Get reschedules
+export const getReschedules = async () => {
+  const reschedRef = ref(db, 'reschedules')
+  const snapshot = await get(reschedRef)
+  if (!snapshot.exists()) return []
+  return Object.values(snapshot.val())
+}
+
+// Listen reschedules
+export const listenReschedules = (callback) => {
+  const reschedRef = ref(db, 'reschedules')
+  return onValue(reschedRef, (snapshot) => {
+    if (!snapshot.exists()) { callback([]); return }
+    callback(Object.values(snapshot.val()))
+  })
+}
+
+// Update schedule entry
+export const updateScheduleEntry = async (id, updates) => {
+  const schedRef = ref(db, `schedules/${id}`)
+  await update(schedRef, updates)
 }

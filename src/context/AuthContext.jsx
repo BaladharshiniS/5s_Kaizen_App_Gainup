@@ -9,30 +9,44 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null
   })
 
-const login = async (email, password) => {
-  try {
-    const found = mockUsers.find(u => u.email === email)
-    if (!found) return { success: false }
-    let correctPassword = found.password
+  const login = async (email, password) => {
     try {
-      const fromFirebase = await getUserPassword(email)
-      if (fromFirebase) correctPassword = fromFirebase
-    } catch (e) {
-      // Firebase failed, use mockUsers password
+      const found = mockUsers.find(u => u.email === email)
+      if (!found) return { success: false }
+      let correctPassword = found.password
+      try {
+        const fromFirebase = await getUserPassword(email)
+        if (fromFirebase) correctPassword = fromFirebase
+      } catch (e) {}
+      if (correctPassword === password) {
+        const safeUser = { ...found }
+        delete safeUser.password
+        setUser(safeUser)
+        localStorage.setItem('currentUser', JSON.stringify(safeUser))
+        return { success: true }
+      }
+      return { success: false }
+    } catch (err) {
+      console.error('Login error:', err)
+      return { success: false }
     }
-    if (correctPassword === password) {
-      const safeUser = { ...found }
-      delete safeUser.password
-      setUser(safeUser)
-      localStorage.setItem('currentUser', JSON.stringify(safeUser))
-      return { success: true }
-    }
-    return { success: false }
-  } catch (err) {
-    console.error('Login error:', err)
-    return { success: false }
   }
-}
+
+  // ✅ NEW: External auditor login — no password needed
+  const externalLogin = (name) => {
+    const guestUser = {
+      name: name.trim(),
+      email: `external_${Date.now()}@gainup.guest`,
+      role: 'Auditor',
+      designation: 'External Auditor',
+      team: 'External',
+      isExternal: true,
+    }
+    setUser(guestUser)
+    localStorage.setItem('currentUser', JSON.stringify(guestUser))
+    return { success: true }
+  }
+
   const changePassword = async (email, oldPassword, newPassword) => {
     const correctPassword = await getUserPassword(email)
     if (correctPassword !== oldPassword) return { success: false, error: 'Old password is wrong!' }
@@ -46,7 +60,8 @@ const login = async (email, password) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, changePassword }}>
+    // ✅ externalLogin added to context
+    <AuthContext.Provider value={{ user, login, externalLogin, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   )

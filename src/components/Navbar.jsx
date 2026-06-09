@@ -66,6 +66,7 @@ useEffect(() => {
   { label: 'Master Setup', emoji: '⚙️', path: '/master-setup', roles: ['MD', 'Admin', 'AuditIncharge'] },
   { label: 'My Ideas', emoji: '💡', path: '/my-ideas', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
   { label: 'Team Performance', emoji: '📊', path: '/team-performance', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator'] },
+  { label: 'Calendar', emoji: '📅', path: '/calendar', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
 ]
 
   const navItems = allNavItems.filter(item => item.roles.includes(user?.role))

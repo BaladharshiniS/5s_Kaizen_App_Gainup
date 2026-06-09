@@ -95,8 +95,8 @@ const NewAudit = () => {
   const lang = useLang()
   const navigate = useNavigate()
 
-  const canPutMarks = user?.role === 'AuditIncharge' || user?.role === 'MD'
-  const canAudit = user?.role === 'AuditIncharge' || user?.role === 'FiveS_Incharge' || user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'TeamLead' || user?.role === 'MD'
+  const canPutMarks = user?.role === 'AuditIncharge' || user?.role === 'MD' || user?.role === 'Auditor'
+  const canAudit = user?.role === 'AuditIncharge' || user?.role === 'FiveS_Incharge' || user?.role === 'Coordinator' || user?.role === 'Admin' || user?.role === 'TeamLead' || user?.role === 'MD' || user?.role === 'Auditor'
   const viewOnly = !canAudit
 
   const [step, setStep] = useState(1)
@@ -125,8 +125,13 @@ const NewAudit = () => {
   const [activeCamera, setActiveCamera] = useState(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [yesNo, setYesNo] = useState({})
+  const [uploadingKeys, setUploadingKeys] = useState({})
+  const [showReauditPopup, setShowReauditPopup] = useState(false)
+  const [reauditRequired, setReauditRequired] = useState(false)
+  const [reauditDate, setReauditDate] = useState('')
 
   const [allAudits, setAllAudits] = useState([])
+
   useEffect(() => {
     getAudits().then(setAllAudits).catch(() => setAllAudits([]))
   }, [])
@@ -187,7 +192,6 @@ const NewAudit = () => {
     const done = getCompletedLevels()
     const prev = getPreviousAudits(level)
     setPrevAudits(prev)
-
     if (!checkSLevelCompletion(level)) {
       setCompletedLevels(done)
       setShowSLevelCheck(true)
@@ -209,14 +213,18 @@ const NewAudit = () => {
   const handlePhoto = async (sLevel, idx, e) => {
     const files = Array.from(e.target.files)
     if (!files.length) return
+    const key = `${sLevel}_${idx}`
+    setUploadingKeys(p => ({ ...p, [key]: true }))
     try {
       const urls = await Promise.all(files.map(f => uploadImageToCloudinary(f)))
       setBeforePhotos(p => ({
         ...p,
-        [`${sLevel}_${idx}`]: [...(p[`${sLevel}_${idx}`] || []), ...urls]
+        [key]: [...(p[key] || []), ...urls]
       }))
     } catch (err) {
       console.error('Upload failed:', err)
+    } finally {
+      setUploadingKeys(p => ({ ...p, [key]: false }))
     }
   }
 
@@ -270,6 +278,8 @@ const NewAudit = () => {
       submittedBy: user?.name,
       date: new Date(auditDate).toLocaleDateString(),
       timestamp: new Date().toISOString(),
+      reauditRequired,
+      reauditDate: reauditRequired ? reauditDate : null,
     }
     try {
       await saveAudit(audit)
@@ -296,6 +306,9 @@ const NewAudit = () => {
   const getColor = s => s >= 80 ? '#16a34a' : s >= 60 ? '#d97706' : '#dc2626'
   const getBg = s => s >= 80 ? '#dcfce7' : s >= 60 ? '#fef9c3' : '#fee2e2'
 
+  // ─────────────────────────────────────────────
+  // PREVIEW MODE
+  // ─────────────────────────────────────────────
   if (previewMode) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
@@ -303,9 +316,7 @@ const NewAudit = () => {
         <div className="p-4 max-w-2xl mx-auto">
 
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-            <h2 className="text-xl font-black text-gray-800 mb-3">
-              📋 Audit Preview
-            </h2>
+            <h2 className="text-xl font-black text-gray-800 mb-3">📋 Audit Preview</h2>
             <div className="space-y-2 text-sm">
               <p><span className="font-black">Department:</span> {area}</p>
               <p><span className="font-black">Audit Level:</span> {auditLevel}</p>
@@ -327,14 +338,11 @@ const NewAudit = () => {
                     <p className="font-bold text-sm">{key}</p>
                     <p className="font-black text-blue-700">{score}</p>
                   </div>
-                  {remark && (
-                    <p className="text-xs text-orange-600 mb-2">{remark}</p>
-                  )}
+                  {remark && <p className="text-xs text-orange-600 mb-2">{remark}</p>}
                   {photo && Array.isArray(photo) && photo.length > 0 && (
                     <div className="flex gap-2 flex-wrap mt-2">
                       {photo.map((url, i) => (
-                        <img key={i} src={url} alt=""
-                          className="w-20 h-20 object-cover rounded-xl" />
+                        <img key={i} src={url} alt="" className="w-20 h-20 object-cover rounded-xl" />
                       ))}
                     </div>
                   )}
@@ -343,14 +351,14 @@ const NewAudit = () => {
             })}
           </div>
 
-          <div className="flex gap-3 mt-4 mb-8">
+          <div className="flex gap-3 mt-4 mb-8 relative z-10">
             <button
               onClick={() => setPreviewMode(false)}
               className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black">
               ← Back
             </button>
             <button
-              onClick={doSubmit}
+              onClick={() => { console.log('clicked', showReauditPopup); setShowReauditPopup(true) }}
               className="flex-1 text-white py-4 rounded-2xl font-black"
               style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
               Confirm Submit ✅
@@ -358,10 +366,72 @@ const NewAudit = () => {
           </div>
 
         </div>
+
+        {/* ✅ Re-audit Popup — outside p-4, inside min-h-screen */}
+        {showReauditPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: 'rgba(0,0,0,0.6)' }}>
+            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm">
+              <p className="font-black text-gray-800 text-base mb-1">🔄 Re-audit Required?</p>
+              <p className="text-xs text-gray-400 mb-4">If this area needs a follow-up audit, select a date.</p>
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={() => { setReauditRequired(false); setReauditDate('') }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                  style={!reauditRequired
+                    ? { background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: 'white' }
+                    : { background: '#f1f5f9', color: '#64748b' }}>
+                  No
+                </button>
+                <button
+                  onClick={() => setReauditRequired(true)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                  style={reauditRequired
+                    ? { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: 'white' }
+                    : { background: '#f1f5f9', color: '#64748b' }}>
+                  Yes
+                </button>
+              </div>
+              {reauditRequired && (
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-gray-600 mb-2">Select Re-audit Date</label>
+                  <input
+                    type="date"
+                    value={reauditDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={e => setReauditDate(e.target.value)}
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50"
+                  />
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowReauditPopup(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold bg-gray-100 text-gray-700">
+                  {lang === 'ta' ? 'பின்செல்' : 'Back'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReauditPopup(false)
+                    setTimeout(() => handleSubmit(), 50)
+                  }}
+                  disabled={reauditRequired && !reauditDate}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
+                  style={{ background: reauditRequired && !reauditDate ? '#94a3b8' : 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                  Submit ✅
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     )
   }
 
+  // ─────────────────────────────────────────────
+  // SUBMITTED
+  // ─────────────────────────────────────────────
   if (submitted) {
     const pct = getScorePercent()
     return (
@@ -392,6 +462,9 @@ const NewAudit = () => {
     )
   }
 
+  // ─────────────────────────────────────────────
+  // STEP 1 — Select Team / Dept / Level
+  // ─────────────────────────────────────────────
   if (step === 1) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
@@ -530,7 +603,8 @@ const NewAudit = () => {
               if (!finalAuditorName) { setAlertMsg('Please select auditor!'); return }
               setAlertMsg('')
               setStep(2)
-            }} className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg"
+            }}
+              className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg"
               style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
               Start Audit →
             </button>
@@ -610,10 +684,14 @@ const NewAudit = () => {
             </div>
           </div>
         )}
+
       </div>
     )
   }
 
+  // ─────────────────────────────────────────────
+  // STEP 2 — Checklist
+  // ─────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
       <Navbar />
@@ -692,7 +770,7 @@ const NewAudit = () => {
                     return (
                       <div key={idx} className="p-4">
 
-                        {/* ── Title row ── */}
+                        {/* Title row */}
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-800 font-semibold leading-snug">
@@ -709,7 +787,7 @@ const NewAudit = () => {
                           </span>
                         </div>
 
-                        {/* ── Yes / No row ── */}
+                        {/* Yes / No row */}
                         <div className="flex items-center gap-2 ml-4 mb-2">
                           <span className="text-xs text-gray-400 font-semibold">Followed?</span>
                           <button
@@ -732,7 +810,7 @@ const NewAudit = () => {
                           </button>
                         </div>
 
-                        {/* ── Score slider — canPutMarks only ── */}
+                        {/* Score slider */}
                         {canPutMarks ? (
                           <div className="mt-2">
                             <div className="flex items-center gap-3 mb-1">
@@ -770,7 +848,7 @@ const NewAudit = () => {
                           </div>
                         )}
 
-                        {/* ── Remark — canPutMarks ── */}
+                        {/* Remark — canPutMarks */}
                         {canPutMarks && (
                           <div className="mt-2">
                             <label className="text-xs font-bold mb-1 block"
@@ -805,7 +883,7 @@ const NewAudit = () => {
                           </div>
                         )}
 
-                        {/* ── Remark — non-scorers ── */}
+                        {/* Remark — non-scorers */}
                         {!canPutMarks && canAudit && (
                           <div className="mt-2">
                             <label className="text-xs font-bold text-gray-400 mb-1 block">
@@ -822,7 +900,7 @@ const NewAudit = () => {
                           </div>
                         )}
 
-                        {/* ── Photos ── */}
+                        {/* Photos */}
                         {canAudit && (
                           <div className="mt-3">
                             <p className="text-xs font-bold text-gray-500 mb-2">📸 Current State</p>
@@ -852,6 +930,15 @@ const NewAudit = () => {
                                     </button>
                                   </div>
                                 ))}
+                              </div>
+                            )}
+
+                            {/* Upload loading indicator */}
+                            {uploadingKeys[key] && (
+                              <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-2"
+                                style={{ background: '#eff6ff' }}>
+                                <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
+                                <p className="text-xs font-bold text-blue-600">Uploading photo...</p>
                               </div>
                             )}
 
@@ -912,28 +999,118 @@ const NewAudit = () => {
         )}
 
         {/* Submit button */}
-        {canAudit && (
-          <button type="button" onClick={handleSubmit}
-            className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg mt-4 mb-8"
-            style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
-            Submit Audit ✅
-          </button>
-        )}
+{canAudit && (
+  <button type="button" onClick={() => {
+    if (!area) { setAlertMsg('Please select a department!'); return }
+    if (!auditLevel) { setAlertMsg('Please select audit level!'); return }
+    if (!teamName) { setAlertMsg('Please select a team!'); return }
+    if (!finalAuditorName) { setAlertMsg('Please select auditor name!'); return }
+
+    const allKeys = getActiveLevels().flatMap(sLevel =>
+      (checklist[sLevel]?.items || []).map((_, idx) => `${sLevel}_${idx}`)
+    )
+    if (canPutMarks) {
+      const hasAnyScore = allKeys.some(k =>
+        scores[k] !== undefined && scores[k] !== null && scores[k] !== ''
+      )
+      if (!hasAnyScore) {
+        setAlertMsg('⚠️ No scores entered! Please score at least one item before submitting.')
+        return
+      }
+    }
+    if (!canPutMarks && canAudit) {
+      const hasPhotos = allKeys.some(k => (beforePhotos[k] || []).length > 0)
+      const hasRemarks = allKeys.some(k => remarks[k]?.trim())
+      if (!hasPhotos && !hasRemarks) {
+        setAlertMsg('⚠️ Please add at least one photo or observation before submitting.')
+        return
+      }
+    }
+    setShowReauditPopup(true)
+  }}
+    className="w-full text-white py-4 rounded-2xl font-black text-base shadow-lg mt-4 mb-8"
+    style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+    Submit Audit ✅
+  </button>
+)}
 
       </div>
+
+      {/* Reaudit Popup */}
+      {showReauditPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.6)' }}>
+          <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm">
+            <p className="font-black text-gray-800 text-base mb-1">
+              {lang === 'ta' ? '🔄 மறு தணிக்கை தேவையா?' : '🔄 Re-audit Required?'}
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              {lang === 'ta' ? 'இந்த பகுதிக்கு மறு தணிக்கை தேவை என்றால், தேதியை தேர்ந்தெடுக்கவும்.' : 'If this area needs a follow-up audit, select a date.'}
+            </p>
+            <div className="flex gap-3 mb-4">
+              <button onClick={() => { setReauditRequired(false); setReauditDate('') }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                style={!reauditRequired
+                  ? { background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: 'white' }
+                  : { background: '#f1f5f9', color: '#64748b' }}>
+                {lang === 'ta' ? 'இல்லை' : 'No'}
+              </button>
+              <button onClick={() => setReauditRequired(true)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                style={reauditRequired
+                  ? { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: 'white' }
+                  : { background: '#f1f5f9', color: '#64748b' }}>
+                {lang === 'ta' ? 'ஆம்' : 'Yes'}
+              </button>
+            </div>
+            {reauditRequired && (
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-600 mb-2">
+  {lang === 'ta' ? 'மறு தணிக்கை தேதியை தேர்ந்தெடுக்கவும்' : 'Select Re-audit Date'}
+</label>
+                <input type="date"
+                  value={reauditDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setReauditDate(e.target.value)}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none bg-gray-50" />
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setShowReauditPopup(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-bold bg-gray-100 text-gray-700">
+                {lang === 'ta' ? 'பின்செல்' : 'Back'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowReauditPopup(false)
+                  setTimeout(() => handleSubmit(), 50)
+                }}
+                disabled={reauditRequired && !reauditDate}
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
+                style={{ background: reauditRequired && !reauditDate ? '#94a3b8' : 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+                {lang === 'ta' ? 'தொடரவும் →' : 'Continue →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Camera Modal */}
       {activeCamera && (
         <CameraModal
           onCapture={async dataUrl => {
+            const key = activeCamera
+            setUploadingKeys(p => ({ ...p, [key]: true }))
             try {
               const url = await uploadImageToCloudinary(dataUrl)
               setBeforePhotos(p => ({
                 ...p,
-                [activeCamera]: [...(p[activeCamera] || []), url]
+                [key]: [...(p[key] || []), url]
               }))
             } catch (err) {
               console.error('Upload failed:', err)
+            } finally {
+              setUploadingKeys(p => ({ ...p, [key]: false }))
             }
             setActiveCamera(null)
           }}
@@ -946,3 +1123,4 @@ const NewAudit = () => {
 }
 
 export default NewAudit
+
