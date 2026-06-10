@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
-import { getKaizens, KAIZEN_STAGES } from '../firebase'
+import { getKaizens, getAudits, KAIZEN_STAGES } from '../firebase'
 
 const STAGE_STYLE = {
   'Submitted':            { color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
@@ -40,13 +40,144 @@ const IdeaProgressBar = ({ stage }) => {
         const done = i <= current
         return (
           <div key={s} className="flex-1 flex flex-col items-center gap-1">
-            <div
-              className="w-full h-1.5 rounded-full"
-              style={{ background: done ? style.dot : '#e2e8f0' }}
-            />
+            <div className="w-full h-1.5 rounded-full"
+              style={{ background: done ? style.dot : '#e2e8f0' }} />
           </div>
         )
       })}
+    </div>
+  )
+}
+
+const KpiScoreSection = ({ teamAudits, team }) => {
+  const [expanded, setExpanded] = useState(null)
+
+  if (teamAudits.length === 0) return null
+
+  // Group audits by date
+  const grouped = {}
+  teamAudits.forEach(audit => {
+    const date = audit.auditDate || audit.date || '—'
+    if (!grouped[date]) grouped[date] = []
+    grouped[date].push(audit)
+  })
+
+  const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a))
+  const latestDate = sortedDates[0]
+  const latestAudits = grouped[latestDate] || []
+  const latestPct = Math.round(
+    latestAudits.reduce((sum, a) => sum + (a.scorePercent ?? (a.totalMarks ? Math.round((a.scoredMarks / a.totalMarks) * 100) : 0)), 0) /
+    latestAudits.length
+  )
+
+  const prevDate = sortedDates[1]
+  const prevAudits = grouped[prevDate] || []
+  const prevPct = prevAudits.length
+    ? Math.round(prevAudits.reduce((sum, a) => sum + (a.scorePercent ?? (a.totalMarks ? Math.round((a.scoredMarks / a.totalMarks) * 100) : 0)), 0) / prevAudits.length)
+    : null
+
+  const trend = prevPct !== null ? latestPct - prevPct : null
+
+  return (
+    <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <p className="text-xs font-black text-gray-500 mb-3">📊 MY KPI SCORE · {team}</p>
+
+      {/* Primary score card */}
+      <div className="rounded-xl p-4 mb-3 flex items-center justify-between"
+        style={{
+          background: latestPct >= 80 ? '#dcfce7' : latestPct >= 60 ? '#fef9c3' : '#fee2e2'
+        }}>
+        <div>
+          <p className="text-3xl font-black"
+            style={{ color: latestPct >= 80 ? '#166534' : latestPct >= 60 ? '#92400e' : '#dc2626' }}>
+            {latestPct}%
+          </p>
+          <p className="text-xs font-bold text-gray-500 mt-0.5">Latest · {latestDate}</p>
+        </div>
+        <div className="text-right">
+          {trend !== null && (
+            <p className="text-sm font-black"
+              style={{ color: trend >= 0 ? '#166534' : '#dc2626' }}>
+              {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%
+            </p>
+          )}
+          {trend !== null && (
+            <p className="text-xs text-gray-400">vs previous</p>
+          )}
+        </div>
+      </div>
+
+      {/* History accordion */}
+      <p className="text-xs font-black text-gray-400 uppercase mb-2">Audit History</p>
+      <div className="space-y-2">
+        {sortedDates.map((date, i) => {
+          const audits = grouped[date]
+          const avgPct = Math.round(
+            audits.reduce((sum, a) => sum + (a.scorePercent ?? (a.totalMarks ? Math.round((a.scoredMarks / a.totalMarks) * 100) : 0)), 0) /
+            audits.length
+          )
+          const isOpen = expanded === date
+          return (
+            <div key={date} className="rounded-xl overflow-hidden"
+              style={{ border: '1px solid #e2e8f0' }}>
+              {/* Row header — tap to expand */}
+              <button
+                onClick={() => setExpanded(isOpen ? null : date)}
+                className="w-full flex items-center justify-between px-3 py-2.5"
+                style={{ background: '#f8fafc' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-gray-700">{date}</span>
+                  {i === 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold text-white"
+                      style={{ background: '#1e40af', fontSize: '9px' }}>LATEST</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black"
+                    style={{ color: avgPct >= 80 ? '#166534' : avgPct >= 60 ? '#92400e' : '#dc2626' }}>
+                    {avgPct}%
+                  </span>
+                  <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                </div>
+              </button>
+
+              {/* Expanded zone breakdown */}
+              {isOpen && (
+                <div className="px-3 pb-3 pt-1 space-y-1.5" style={{ background: 'white' }}>
+                  {audits.map((audit, j) => {
+                    const pct = audit.scorePercent ?? (audit.totalMarks ? Math.round((audit.scoredMarks / audit.totalMarks) * 100) : 0)
+                    return (
+                      <div key={j} className="flex items-center justify-between rounded-lg px-3 py-2"
+                        style={{ background: '#f8fafc' }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-xs flex-shrink-0"
+                            style={{ background: pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626' }}>
+                            {audit.auditLevel || '—'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-700">{audit.area || '—'}</p>
+                            <p className="text-xs text-gray-400">{audit.auditorName || '—'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black"
+                            style={{ color: pct >= 80 ? '#166534' : pct >= 60 ? '#92400e' : '#dc2626' }}>
+                            {audit.scoredMarks}/{audit.totalMarks}
+                          </p>
+                          <p className="text-xs font-bold"
+                            style={{ color: pct >= 80 ? '#166534' : pct >= 60 ? '#92400e' : '#dc2626' }}>
+                            {pct}%
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -58,6 +189,7 @@ const MyIdeas = () => {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [filterStage, setFilterStage] = useState('')
+  const [teamAudits, setTeamAudits] = useState([])
 
   useEffect(() => {
     const load = async () => {
@@ -67,6 +199,9 @@ const MyIdeas = () => {
         k.submittedBy === user?.name ||
         k.submittedBy === user?.email
       )
+      const allAudits = await getAudits()
+      const myTeamAudits = allAudits.filter(a => a.teamName === user?.team)
+      setTeamAudits(myTeamAudits)
       setMyIdeas(mine)
       setLoading(false)
     }
@@ -81,17 +216,34 @@ const MyIdeas = () => {
     .filter(k => k.stage === 'Closed')
     .reduce((sum, k) => sum + (Number(k.savingsAchieved) || 0), 0)
 
-  const closedCount  = myIdeas.filter(k => k.stage === 'Closed').length
-  const activeCount  = myIdeas.filter(k => k.stage !== 'Closed').length
-  const stuckCount   = myIdeas.filter(k => getAgingInfo(k)?.level === 'red' || getAgingInfo(k)?.level === 'md').length
+  const closedCount = myIdeas.filter(k => k.stage === 'Closed').length
+  const activeCount = myIdeas.filter(k => k.stage !== 'Closed').length
+  const stuckCount  = myIdeas.filter(k => getAgingInfo(k)?.level === 'red' || getAgingInfo(k)?.level === 'md').length
 
   // ── Empty state ──────────────────────────────────────────────────────
   if (!loading && myIdeas.length === 0) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
         <Navbar />
-        <div className="p-4 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[80vh]">
-          <div className="bg-white rounded-3xl p-10 text-center shadow-sm w-full">
+        <div className="p-4 max-w-lg mx-auto">
+
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-xl font-black text-gray-800">My Profile</h1>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {user?.name} · {user?.designation || user?.role}
+              </p>
+            </div>
+            <button onClick={() => navigate('/submit-kaizen')}
+              className="px-3 py-2 rounded-xl text-xs font-black text-white"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+              + New Idea
+            </button>
+          </div>
+
+          <KpiScoreSection teamAudits={teamAudits} team={user?.team} />
+
+          <div className="bg-white rounded-3xl p-8 text-center shadow-sm">
             <div className="text-6xl mb-4">💡</div>
             <h2 className="text-lg font-black text-gray-800 mb-2">
               No ideas yet, {user?.name?.split(' ')[0]}!
@@ -100,26 +252,25 @@ const MyIdeas = () => {
               Every big improvement starts with one small idea.<br />
               Your idea could save time, money, or effort for the whole team.
             </p>
-            <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="grid grid-cols-3 gap-3 mb-6">
               {[
                 { emoji: '🏆', label: 'Earn points' },
                 { emoji: '💰', label: 'Win incentives' },
                 { emoji: '🌟', label: 'Get recognized' },
               ].map(({ emoji, label }) => (
-                <div key={label} className="rounded-2xl p-3 text-center"
-                  style={{ background: '#f8fafc' }}>
+                <div key={label} className="rounded-2xl p-3 text-center" style={{ background: '#f8fafc' }}>
                   <p className="text-2xl mb-1">{emoji}</p>
                   <p className="text-xs font-bold text-gray-500">{label}</p>
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => navigate('/submit-kaizen')}
+            <button onClick={() => navigate('/submit-kaizen')}
               className="w-full py-3 rounded-2xl text-white font-black text-sm"
               style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
               ✨ Submit My First Idea
             </button>
           </div>
+
         </div>
       </div>
     )
@@ -133,13 +284,12 @@ const MyIdeas = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-black text-gray-800">My Ideas</h1>
+            <h1 className="text-xl font-black text-gray-800">My Profile</h1>
             <p className="text-xs text-gray-400 mt-0.5">
               {user?.name} · {user?.designation || user?.role}
             </p>
           </div>
-          <button
-            onClick={() => navigate('/submit-kaizen')}
+          <button onClick={() => navigate('/submit-kaizen')}
             className="px-3 py-2 rounded-xl text-xs font-black text-white"
             style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
             + New Idea
@@ -149,14 +299,14 @@ const MyIdeas = () => {
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-2 mb-4">
           {[
-            { label: 'Total',    value: myIdeas.length,  bg: '#f1f5f9', color: '#475569' },
-            { label: 'Active',   value: activeCount,     bg: '#dbeafe', color: '#1e40af' },
-            { label: 'Closed',   value: closedCount,     bg: '#dcfce7', color: '#166534' },
-            { label: 'Stuck',    value: stuckCount,      bg: stuckCount > 0 ? '#fee2e2' : '#f1f5f9',
-                                                          color: stuckCount > 0 ? '#dc2626' : '#94a3b8' },
+            { label: 'Total',  value: myIdeas.length, bg: '#f1f5f9', color: '#475569' },
+            { label: 'Active', value: activeCount,    bg: '#dbeafe', color: '#1e40af' },
+            { label: 'Closed', value: closedCount,    bg: '#dcfce7', color: '#166534' },
+            { label: 'Stuck',  value: stuckCount,
+              bg: stuckCount > 0 ? '#fee2e2' : '#f1f5f9',
+              color: stuckCount > 0 ? '#dc2626' : '#94a3b8' },
           ].map(({ label, value, bg, color }) => (
-            <div key={label} className="rounded-2xl p-3 text-center"
-              style={{ background: bg }}>
+            <div key={label} className="rounded-2xl p-3 text-center" style={{ background: bg }}>
               <p className="text-lg font-black" style={{ color }}>{value}</p>
               <p className="text-xs font-semibold" style={{ color }}>{label}</p>
             </div>
@@ -175,11 +325,13 @@ const MyIdeas = () => {
           </div>
         )}
 
+        {/* KPI Score */}
+        <KpiScoreSection teamAudits={teamAudits} team={user?.team} />
+
         {/* Stage filter */}
         <div className="bg-white rounded-2xl p-3 mb-4 shadow-sm">
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setFilterStage('')}
+            <button onClick={() => setFilterStage('')}
               className="px-3 py-1.5 rounded-xl text-xs font-bold"
               style={!filterStage
                 ? { background: '#1e40af', color: 'white' }
@@ -190,8 +342,7 @@ const MyIdeas = () => {
               const style = STAGE_STYLE[s]
               const count = myIdeas.filter(k => k.stage === s).length
               return (
-                <button key={s}
-                  onClick={() => setFilterStage(s)}
+                <button key={s} onClick={() => setFilterStage(s)}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold"
                   style={filterStage === s
                     ? { background: style.dot, color: 'white' }
@@ -216,50 +367,34 @@ const MyIdeas = () => {
             const stageStyle = STAGE_STYLE[k.stage] || STAGE_STYLE['Submitted']
             const aging = getAgingInfo(k)
             return (
-              <div
-                key={k.id}
-                onClick={() => setSelected(k)}
+              <div key={k.id} onClick={() => setSelected(k)}
                 className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition"
                 style={{ border: aging ? `2px solid ${aging.color}40` : '2px solid transparent' }}>
-
-                {/* Title + stage */}
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-black text-gray-800 flex-1 leading-tight">
-                    {k.title}
-                  </p>
+                  <p className="text-sm font-black text-gray-800 flex-1 leading-tight">{k.title}</p>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                     style={{ background: stageStyle.bg, color: stageStyle.color }}>
                     {k.stage}
                   </span>
                 </div>
-
-                {/* Progress bar */}
                 <IdeaProgressBar stage={k.stage} />
-
-                {/* Meta row */}
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   <span className="text-xs text-gray-400">{k.submittedDate}</span>
-                  {k.area && (
-                    <span className="text-xs text-gray-400">· {k.area}</span>
-                  )}
-                  {(k.estimatedSaving > 0) && (
+                  {k.area && <span className="text-xs text-gray-400">· {k.area}</span>}
+                  {k.estimatedSaving > 0 && (
                     <span className="text-xs font-bold text-blue-600">
                       Est. ₹{Number(k.estimatedSaving).toLocaleString('en-IN')}
                     </span>
                   )}
-                  {(k.savingsAchieved > 0) && (
+                  {k.savingsAchieved > 0 && (
                     <span className="text-xs font-bold text-green-600">
                       Saved ₹{Number(k.savingsAchieved).toLocaleString('en-IN')}
                     </span>
                   )}
                   {k.incentiveGiven && (
-                    <span className="text-xs font-bold text-purple-600">
-                      🎁 {k.incentiveGiven}
-                    </span>
+                    <span className="text-xs font-bold text-purple-600">🎁 {k.incentiveGiven}</span>
                   )}
                 </div>
-
-                {/* Aging badge */}
                 {aging && (
                   <div className="mt-2">
                     <span className="text-xs font-bold px-2 py-0.5 rounded-full"
@@ -287,25 +422,18 @@ const MyIdeas = () => {
                   <h2 className="text-sm font-black text-gray-800">{selected.title}</h2>
                   <div className="flex gap-1 mt-1 flex-wrap">
                     <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: STAGE_STYLE[selected.stage]?.bg,
-                        color: STAGE_STYLE[selected.stage]?.color
-                      }}>
+                      style={{ background: STAGE_STYLE[selected.stage]?.bg, color: STAGE_STYLE[selected.stage]?.color }}>
                       {selected.stage}
                     </span>
                     {getAgingInfo(selected) && (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: getAgingInfo(selected).bg,
-                          color: getAgingInfo(selected).color
-                        }}>
+                        style={{ background: getAgingInfo(selected).bg, color: getAgingInfo(selected).color }}>
                         {getAgingInfo(selected).label}
                       </span>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelected(null)}
+                <button onClick={() => setSelected(null)}
                   className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-500">
                   ×
                 </button>
@@ -314,17 +442,15 @@ const MyIdeas = () => {
             </div>
 
             <div className="p-5 space-y-4">
-
-              {/* Details */}
               <div className="rounded-2xl p-3 space-y-1.5" style={{ background: '#f8fafc' }}>
                 {[
-                  ['Submitted',   selected.submittedDate],
-                  ['Team',        selected.submittedTeam || selected.team],
-                  ['Department',  selected.area],
-                  ['Priority',    selected.priority],
-                  ['Est. Saving', selected.estimatedSaving ? `₹${Number(selected.estimatedSaving).toLocaleString('en-IN')}` : null],
+                  ['Submitted',     selected.submittedDate],
+                  ['Team',          selected.submittedTeam || selected.team],
+                  ['Department',    selected.area],
+                  ['Priority',      selected.priority],
+                  ['Est. Saving',   selected.estimatedSaving ? `₹${Number(selected.estimatedSaving).toLocaleString('en-IN')}` : null],
                   ['Actual Saving', selected.savingsAchieved > 0 ? `₹${Number(selected.savingsAchieved).toLocaleString('en-IN')}` : null],
-                  ['Incentive',   selected.incentiveGiven || null],
+                  ['Incentive',     selected.incentiveGiven || null],
                 ].filter(([, v]) => v).map(([l, v]) => (
                   <div key={l} className="flex gap-2 text-xs">
                     <span className="text-gray-400 w-24 flex-shrink-0">{l}:</span>
@@ -333,25 +459,24 @@ const MyIdeas = () => {
                 ))}
               </div>
 
-              {/* Problem */}
               {selected.description && (
                 <div>
                   <p className="text-xs font-black text-gray-500 mb-1">PROBLEM</p>
-                  <p className="text-xs text-gray-700 rounded-xl p-3"
-                    style={{ background: '#fee2e2' }}>{selected.description}</p>
+                  <p className="text-xs text-gray-700 rounded-xl p-3" style={{ background: '#fee2e2' }}>
+                    {selected.description}
+                  </p>
                 </div>
               )}
 
-              {/* Solution */}
               {selected.proposedSolution && (
                 <div>
                   <p className="text-xs font-black text-gray-500 mb-1">SOLUTION</p>
-                  <p className="text-xs text-gray-700 rounded-xl p-3"
-                    style={{ background: '#dcfce7' }}>{selected.proposedSolution}</p>
+                  <p className="text-xs text-gray-700 rounded-xl p-3" style={{ background: '#dcfce7' }}>
+                    {selected.proposedSolution}
+                  </p>
                 </div>
               )}
 
-              {/* Pipeline timeline */}
               <div>
                 <p className="text-xs font-black text-gray-500 mb-2">PIPELINE PROGRESS</p>
                 <div className="rounded-2xl overflow-hidden border border-gray-100">
@@ -368,8 +493,7 @@ const MyIdeas = () => {
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full flex-shrink-0"
                                   style={{ background: isDone ? style.dot : '#e2e8f0' }} />
-                                <span className="font-bold"
-                                  style={{ color: isDone ? style.color : '#94a3b8' }}>
+                                <span className="font-bold" style={{ color: isDone ? style.color : '#94a3b8' }}>
                                   {stage}
                                 </span>
                                 {isCurrent && (
@@ -391,7 +515,6 @@ const MyIdeas = () => {
                 </div>
               </div>
 
-              {/* Comments */}
               {selected.comments?.length > 0 && (
                 <div>
                   <p className="text-xs font-black text-gray-500 mb-2">UPDATES</p>
@@ -400,34 +523,25 @@ const MyIdeas = () => {
                       <div key={i} className="rounded-xl p-3" style={{ background: '#f8fafc' }}>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-black text-gray-700">{c.by}</span>
-                          {c.designation && (
-                            <span className="text-xs text-gray-400">{c.designation}</span>
-                          )}
+                          {c.designation && <span className="text-xs text-gray-400">{c.designation}</span>}
                           <span className="ml-auto text-xs text-gray-400">{c.date}</span>
                         </div>
                         <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mb-1"
-                          style={{
-                            background: STAGE_STYLE[c.stage]?.bg,
-                            color: STAGE_STYLE[c.stage]?.color
-                          }}>
+                          style={{ background: STAGE_STYLE[c.stage]?.bg, color: STAGE_STYLE[c.stage]?.color }}>
                           {c.stage}
                         </span>
-                        {c.text && (
-                          <p className="text-xs text-gray-600 mt-1">{c.text}</p>
-                        )}
+                        {c.text && <p className="text-xs text-gray-600 mt-1">{c.text}</p>}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <button
-                onClick={() => setSelected(null)}
+              <button onClick={() => setSelected(null)}
                 className="w-full py-3 rounded-2xl text-sm font-black text-gray-600"
                 style={{ background: '#f1f5f9' }}>
                 Close
               </button>
-
             </div>
           </div>
         </div>

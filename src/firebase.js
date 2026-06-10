@@ -159,6 +159,66 @@ export const mockUsers = [
   { email: 'spartan@gainup.com', password: 'spartan123', role: 'TeamLead', name: 'Spartan Kings Lead', designation: 'Team Leader', team: 'Spartan Kings' },
   { email: 'auditor@gainup.com', password: 'auditor123', role: 'Auditor', name: 'Auditor 1', designation: 'Senior Auditor', team: 'Management' },
   { email: 'operator@gainup.com', password: 'operator123', role: 'Operator', name: 'Operator 1', designation: 'Machine Operator', team: 'Royal Lions' },
+  // ── Team Members ──────────────────────────────────────────────────────
+{ email: 'roja.royallions@gainup.com', password: 'roja123', role: 'TeamMember', name: 'Roja', designation: 'Team Member', team: 'Royal Lions' },
+{ email: 'jerry.royallions@gainup.com', password: 'jerry123', role: 'TeamMember', name: 'Jerry', designation: 'Team Member', team: 'Royal Lions' },
+{ email: 'kumari.royallions@gainup.com', password: 'kumari123', role: 'TeamMember', name: 'Kumari', designation: 'Team Member', team: 'Royal Lions' },
+{ email: 'akila.royallions@gainup.com', password: 'akila123', role: 'TeamMember', name: 'Akila', designation: 'Team Member', team: 'Royal Lions' },
+{ email: 'ranjith.royallions@gainup.com', password: 'ranjith123', role: 'TeamMember', name: 'Ranjith', designation: 'Team Member', team: 'Royal Lions' },
+{ email: 'mohan.royallions@gainup.com', password: 'mohan123', role: 'TeamMember', name: 'Mohan', designation: 'Team Member', team: 'Royal Lions' },
+
+{ email: 'deepa.dragonforce@gainup.com', password: 'deepa123', role: 'TeamMember', name: 'Deepa', designation: 'Team Member', team: 'Dragon Force' },
+{ email: 'pugazhwaram.dragonforce@gainup.com', password: 'pugazhwaram123', role: 'TeamMember', name: 'Pugazhwaram', designation: 'Team Member', team: 'Dragon Force' },
+{ email: 'sarswathi.dragonforce@gainup.com', password: 'sarswathi123', role: 'TeamMember', name: 'Sarswathi', designation: 'Team Member', team: 'Dragon Force' },
+{ email: 'selvi.dragonforce@gainup.com', password: 'selvi123', role: 'TeamMember', name: 'Selvi', designation: 'Team Member', team: 'Dragon Force' },
+{ email: 'kavitha.dragonforce@gainup.com', password: 'kavitha123', role: 'TeamMember', name: 'Kavitha', designation: 'Team Member', team: 'Dragon Force' },
+
+{ email: 'deepa.goldentiger@gainup.com', password: 'deepa123', role: 'TeamMember', name: 'Deepa', designation: 'Team Member', team: 'Golden Tiger' },
+{ email: 'muthulakshmi.goldentiger@gainup.com', password: 'muthulakshmi123', role: 'TeamMember', name: 'Muthulakshmi', designation: 'Team Member', team: 'Golden Tiger' },
+{ email: 'principal.goldentiger@gainup.com', password: 'principal123', role: 'TeamMember', name: 'Principal', designation: 'Team Member', team: 'Golden Tiger' },
+{ email: 'savithri.goldentiger@gainup.com', password: 'savithri123', role: 'TeamMember', name: 'Savithri', designation: 'Team Member', team: 'Golden Tiger' },
+{ email: 'malathi.goldentiger@gainup.com', password: 'malathi123', role: 'TeamMember', name: 'Malathi', designation: 'Team Member', team: 'Golden Tiger' },
+{ email: 'shanthakumari.goldentiger@gainup.com', password: 'shanthakumari123', role: 'TeamMember', name: 'Shantha Kumari', designation: 'Team Member', team: 'Golden Tiger' },
+
+{ email: 'suganya.goldeneagle@gainup.com', password: 'suganya123', role: 'TeamMember', name: 'Suganya', designation: 'Team Member', team: 'Golden Eagle' },
+{ email: 'indra.goldeneagle@gainup.com', password: 'indra123', role: 'TeamMember', name: 'Indra', designation: 'Team Member', team: 'Golden Eagle' },
+{ email: 'nisha.goldeneagle@gainup.com', password: 'nisha123', role: 'TeamMember', name: 'Nisha', designation: 'Team Member', team: 'Golden Eagle' },
+{ email: 'lalitha.goldeneagle@gainup.com', password: 'lalitha123', role: 'TeamMember', name: 'Lalitha', designation: 'Team Member', team: 'Golden Eagle' },
+{ email: 'kalaiswari.goldeneagle@gainup.com', password: 'kalaiswari123', role: 'TeamMember', name: 'Kalaiswari', designation: 'Team Member', team: 'Golden Eagle' },
+
+{ email: 'deepa.bisonwarriors@gainup.com', password: 'deepa123', role: 'TeamMember', name: 'Deepa', designation: 'Team Member', team: 'Bison Warriors' },
+{ email: 'narmadha.bisonwarriors@gainup.com', password: 'narmadha123', role: 'TeamMember', name: 'Narmadha', designation: 'Team Member', team: 'Bison Warriors' },
+{ email: 'jayanthi.bisonwarriors@gainup.com', password: 'jayanthi123', role: 'TeamMember', name: 'Jayanthi', designation: 'Team Member', team: 'Bison Warriors' },
+{ email: 'muthulakshmi.bisonwarriors@gainup.com', password: 'muthulakshmi123', role: 'TeamMember', name: 'Muthu Lakshmi', designation: 'Team Member', team: 'Bison Warriors' },
+{ email: 'shivalakshmi.bisonwarriors@gainup.com', password: 'shivalakshmi123', role: 'TeamMember', name: 'Shiva Lakshmi', designation: 'Team Member', team: 'Bison Warriors' },
+
+{ email: 'priya.penguins@gainup.com', password: 'priya123', role: 'TeamMember', name: 'Priya', designation: 'Team Member', team: 'Penguins' },
+{ email: 'sujeedha.penguins@gainup.com', password: 'sujeedha123', role: 'TeamMember', name: 'Sujeedha', designation: 'Team Member', team: 'Penguins' },
+{ email: 'jayalakshmi.penguins@gainup.com', password: 'jayalakshmi123', role: 'TeamMember', name: 'Jayalakshmi', designation: 'Team Member', team: 'Penguins' },
+{ email: 'karthika.penguins@gainup.com', password: 'karthika123', role: 'TeamMember', name: 'Karthika', designation: 'Team Member', team: 'Penguins' },
+
+{ email: 'babu.phoenixsquad@gainup.com', password: 'babu123', role: 'TeamMember', name: 'Babu', designation: 'Team Member', team: 'Phoenix Squad' },
+{ email: 'sudha.phoenixsquad@gainup.com', password: 'sudha123', role: 'TeamMember', name: 'Sudha', designation: 'Team Member', team: 'Phoenix Squad' },
+{ email: 'buvena.phoenixsquad@gainup.com', password: 'buvena123', role: 'TeamMember', name: 'Buvena', designation: 'Team Member', team: 'Phoenix Squad' },
+{ email: 'tamil.phoenixsquad@gainup.com', password: 'tamil123', role: 'TeamMember', name: 'Tamil', designation: 'Team Member', team: 'Phoenix Squad' },
+{ email: 'mukesh.phoenixsquad@gainup.com', password: 'mukesh123', role: 'TeamMember', name: 'Mukesh', designation: 'Team Member', team: 'Phoenix Squad' },
+{ email: 'vinothi.phoenixsquad@gainup.com', password: 'vinothi123', role: 'TeamMember', name: 'Vinothi', designation: 'Team Member', team: 'Phoenix Squad' },
+
+{ email: 'suresh.stormblades@gainup.com', password: 'suresh123', role: 'TeamMember', name: 'Suresh', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'anitha.stormblades@gainup.com', password: 'anitha123', role: 'TeamMember', name: 'Anitha', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'priyanka.stormblades@gainup.com', password: 'priyanka123', role: 'TeamMember', name: 'Priyanka', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'manikar.stormblades@gainup.com', password: 'manikar123', role: 'TeamMember', name: 'Manikar', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'narmalar.stormblades@gainup.com', password: 'narmalar123', role: 'TeamMember', name: 'Narmalar', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'kathireesan.stormblades@gainup.com', password: 'kathireesan123', role: 'TeamMember', name: 'Kathireesan', designation: 'Team Member', team: 'Storm Blades' },
+{ email: 'swaminathan.stormblades@gainup.com', password: 'swaminathan123', role: 'TeamMember', name: 'Swaminathan', designation: 'Team Member', team: 'Storm Blades' },
+
+{ email: 'muthu.spartankings@gainup.com', password: 'muthu123', role: 'TeamMember', name: 'Muthu', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'muthuprandi.spartankings@gainup.com', password: 'muthuprandi123', role: 'TeamMember', name: 'Muthuprandi', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'geetha.spartankings@gainup.com', password: 'geetha123', role: 'TeamMember', name: 'Geetha', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'saraswathi.spartankings@gainup.com', password: 'saraswathi123', role: 'TeamMember', name: 'Saraswathi', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'ruban.spartankings@gainup.com', password: 'ruban123', role: 'TeamMember', name: 'Ruban', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'poorna.spartankings@gainup.com', password: 'poorna123', role: 'TeamMember', name: 'Poorna', designation: 'Team Member', team: 'Spartan Kings' },
+{ email: 'muthunasar.spartankings@gainup.com', password: 'muthunasar123', role: 'TeamMember', name: 'Muthunasar', designation: 'Team Member', team: 'Spartan Kings' },
 ]
 
 export const TEAMS = [

@@ -54,19 +54,19 @@ useEffect(() => {
   }
 
   const allNavItems = [
-  { label: 'Dashboard', emoji: '🏠', path: '/dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Dashboard', emoji: '🏠', path: '/dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
   { label: 'New Audit', emoji: '📋', path: '/new-audit', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Auditor'] },
-  { label: 'Audit History', emoji: '📊', path: '/audit-history', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
-  { label: 'Audit Trends', emoji: '📈', path: '/audit-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Audit History', emoji: '📊', path: '/audit-history', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
+  { label: 'Audit Trends', emoji: '📈', path: '/audit-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
   { label: 'Submit Idea', emoji: '💡', path: '/submit-kaizen', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
-  { label: 'Kaizen Board', emoji: '📌', path: '/kaizen-board', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
-  { label: 'Kaizen Stats', emoji: '🏆', path: '/kaizen-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
-  { label: 'Organogram', emoji: '🏢', path: '/organogram', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Kaizen Board', emoji: '📌', path: '/kaizen-board', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
+  { label: 'Kaizen Stats', emoji: '🏆', path: '/kaizen-dashboard', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
+  { label: 'Organogram', emoji: '🏢', path: '/organogram', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
   { label: 'MD View', emoji: '👔', path: '/md-view', roles: ['MD', 'Admin'] },
   { label: 'Master Setup', emoji: '⚙️', path: '/master-setup', roles: ['MD', 'Admin', 'AuditIncharge'] },
-  { label: 'My Ideas', emoji: '💡', path: '/my-ideas', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'My Profile', emoji: '👤', path: '/my-ideas', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
   { label: 'Team Performance', emoji: '📊', path: '/team-performance', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator'] },
-  { label: 'Calendar', emoji: '📅', path: '/calendar', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor'] },
+  { label: 'Calendar', emoji: '📅', path: '/calendar', roles: ['Admin', 'MD', 'AuditIncharge', 'FiveS_Incharge', 'Coordinator', 'TeamLead', 'Operator', 'Auditor', 'TeamMember'] },
 ]
 
   const navItems = allNavItems.filter(item => item.roles.includes(user?.role))

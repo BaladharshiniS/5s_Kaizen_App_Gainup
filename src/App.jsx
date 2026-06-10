@@ -12,7 +12,7 @@ import KaizenDashboard from './pages/KaizenDashboard'
 import MasterSetup from './pages/MasterSetup'
 import Organogram from './pages/Organogram'
 import MDView from './pages/MD_View'
-import MyIdeas from './pages/MyIdeas'
+import MyIdeas from './pages/MyProfile'
 import TeamPerformance from './pages/TeamPerformance'
 import AuditCalendar from './pages/AuditCalendar'
 

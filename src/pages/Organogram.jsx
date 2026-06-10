@@ -1,7 +1,7 @@
 import Navbar from '../components/Navbar'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { saveOrganogram, getOrganogram } from '../firebase'
+import { saveOrganogram, getOrganogram, getAudits } from '../firebase'
 
 // ── Default data ────────────────────────────────────────────────────────────
 const DEFAULT_LEADERSHIP = [
@@ -40,9 +40,42 @@ const Organogram = () => {
   const [showAddTeam, setShowAddTeam]   = useState(false)
   const [newTeam, setNewTeam]           = useState({ ...EMPTY_TEAM })
   const [saving, setSaving]             = useState(false)
+  const [auditScores, setAuditScores] = useState({}) // { teamName: { pct, date } }
   const [editLeadership, setEditLeadership] = useState(false)
   const [leaderForm, setLeaderForm]     = useState(null)
   const detailRef = useRef(null)
+
+  useEffect(() => {
+    getAudits().then(audits => {
+      const scores = {}
+      // Step 1: group by teamName → level → date → audits[]
+const grouped = {}
+audits.forEach(a => {
+  const name = a.teamName
+  if (!name) return
+  const level = a.auditLevel || ''
+  const date = a.auditDate || a.date || ''
+  const pct = a.scorePercent ?? (a.totalMarks ? Math.round((a.scoredMarks / a.totalMarks) * 100) : 0)
+  if (!grouped[name]) grouped[name] = {}
+  if (!grouped[name][level]) grouped[name][level] = {}
+  if (!grouped[name][level][date]) grouped[name][level][date] = []
+  grouped[name][level][date].push(pct)
+})
+
+// Step 2: per team → find latest level → find latest date → average
+const S_ORDER = ['5S', '4S', '3S', '2S', '1S']
+Object.entries(grouped).forEach(([name, levels]) => {
+  const latestLevel = S_ORDER.find(s => levels[s])
+  if (!latestLevel) return
+  const dates = Object.keys(levels[latestLevel]).sort((a, b) => new Date(b) - new Date(a))
+  const latestDate = dates[0]
+  const pcts = levels[latestLevel][latestDate]
+  const avg = Math.round(pcts.reduce((s, p) => s + p, 0) / pcts.length)
+  scores[name] = { pct: avg, date: latestDate }
+})
+      setAuditScores(scores)
+    })
+  }, [])
 
   // Load from Firebase
   useEffect(() => {
@@ -348,6 +381,17 @@ const Organogram = () => {
                   {initials(team.name)}
                 </div>
                 <p className="text-white font-black text-xs flex-1">{team.name}</p>
+                {auditScores[team.name] && (
+                  <span className="text-xs font-black px-1.5 py-0.5 rounded-lg mr-1"
+                    style={{
+                      background: auditScores[team.name].pct >= 80 ? '#16a34a'
+                        : auditScores[team.name].pct >= 60 ? '#d97706' : '#dc2626',
+                      color: 'white',
+                      fontSize: '10px'
+                    }}>
+                    {auditScores[team.name].pct}%
+                  </span>
+                )}
                 <span className="text-white opacity-70 text-xs">{selectedTeam?.name === team.name ? '▲' : '▼'}</span>
                 {canEdit && (
                   <button onClick={e => { e.stopPropagation(); openEditTeam(team) }}

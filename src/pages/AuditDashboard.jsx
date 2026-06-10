@@ -142,25 +142,32 @@ const AuditDashboard = () => {
   })
 
   const teamSLevelData = TEAMS.map(team => {
-    const teamAudits = audits.filter(a => a.teamName === team)
-    if (!teamAudits.length) return null
-    const obj = { team: team.split(' ')[0] }
-    S_LEVELS.forEach(s => {
-      const sAudits = teamAudits.filter(a => {
-        const idx = S_LEVELS.indexOf(a.auditLevel)
-        return idx >= S_LEVELS.indexOf(s)
-      })
-      if (!sAudits.length) { obj[s] = 0; return }
-      const avg = sAudits.reduce((sum, a) => {
-        const items = checklist[s]?.items || []
-        const scored = items.reduce((ss, _, idx) => ss + (Number(a.scores?.[`${s}_${idx}`]) || 0), 0)
-        const total = checklist[s]?.totalMarks || 1
-        return sum + Math.round(scored / total * 100)
-      }, 0) / sAudits.length
-      obj[s] = Math.round(avg)
-    })
-    return obj
-  }).filter(Boolean)
+  const teamAudits = audits.filter(a => a.teamName === team)
+  if (!teamAudits.length) return null
+  const obj = { team: team.split(' ')[0] }
+
+  S_LEVELS.forEach(s => {
+    // Only audits for this exact S level
+    const sAudits = teamAudits.filter(a => a.auditLevel === s)
+    if (!sAudits.length) { obj[s] = 0; return }
+
+    // Find latest date for this level
+    const latestDate = sAudits
+      .map(a => a.auditDate || a.date || '')
+      .sort((a, b) => new Date(b) - new Date(a))[0]
+
+    // Only audits on that latest date
+    const latestAudits = sAudits.filter(a => (a.auditDate || a.date || '') === latestDate)
+
+    // Average scorePercent of those audits
+    const avg = Math.round(
+      latestAudits.reduce((sum, a) => sum + (a.scorePercent || 0), 0) / latestAudits.length
+    )
+    obj[s] = avg
+  })
+
+  return obj
+}).filter(Boolean)
 
   const levelData = S_LEVELS.map(level => {
     const levelAudits = audits.filter(a => a.auditLevel === level)
