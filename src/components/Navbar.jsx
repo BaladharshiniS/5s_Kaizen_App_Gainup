@@ -24,6 +24,9 @@ const Navbar = () => {
   const [showNotifs, setShowNotifs] = useState(false)
   const [notifsRead, setNotifsRead] = useState(false)
   const notifRef = useRef()
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false)
+  const [showComingSoon, setShowComingSoon] = useState(false)
+  const unitRef = useRef()
 
   useEffect(() => {
   if (!user) return
@@ -34,6 +37,16 @@ const Navbar = () => {
   }
   load()
 }, [user])
+
+useEffect(() => {
+  const handleClick = (e) => {
+    if (unitRef.current && !unitRef.current.contains(e.target)) {
+      setShowUnitDropdown(false)
+    }
+  }
+  document.addEventListener('mousedown', handleClick)
+  return () => document.removeEventListener('mousedown', handleClick)
+}, [])
 
 useEffect(() => {
   const handleClick = (e) => {
@@ -106,6 +119,47 @@ useEffect(() => {
                 🌐 {localLang === 'en' ? 'EN' : 'தமிழ்'}
               </button>
             )}
+
+            {/* Unit Switcher */}
+<div className="relative" ref={unitRef}>
+  <button
+    onClick={() => setShowUnitDropdown(p => !p)}
+    className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-bold"
+    style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+    🏭 Woven <span className="text-blue-300 ml-0.5">▾</span>
+  </button>
+
+  {showUnitDropdown && (
+    <div className="absolute right-0 top-12 w-52 rounded-2xl shadow-2xl overflow-hidden z-50"
+      style={{ background: 'white', border: '1px solid #e2e8f0' }}>
+      <div className="px-4 py-2" style={{ background: '#0f172a' }}>
+        <p className="text-white text-xs font-black">Select Unit</p>
+      </div>
+      {[
+        { name: 'Woven', active: true },
+        { name: 'Gloves' },
+        { name: 'Garment 1 - 1st Floor' },
+        { name: 'Socks' },
+        { name: 'Administration' },
+        { name: 'Garment 2' },
+        { name: 'Alamelu Ammal' },
+        { name: 'Garment 1 - 2nd Floor' },
+        { name: 'Spinning' },
+      ].map(unit => (
+        <div key={unit.name}
+          onClick={() => {
+            if (!unit.active) setShowComingSoon(true)
+            setShowUnitDropdown(false)
+          }}
+          className="px-4 py-2.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center justify-between border-b border-gray-50"
+          style={unit.active ? { color: '#f97316', fontWeight: 700 } : { color: '#374151' }}>
+          <span>{unit.name}</span>
+          {unit.active && <span className="text-green-500 text-xs">✓</span>}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 
             {/* Notification Bell */}
 <div className="relative" ref={notifRef}>
@@ -369,6 +423,23 @@ useEffect(() => {
           </div>
         </div>
       )}
+      {showComingSoon && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center"
+    style={{ background: 'rgba(0,0,0,0.5)' }}
+    onClick={() => setShowComingSoon(false)}>
+    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full mx-4 text-center"
+      onClick={e => e.stopPropagation()}>
+      <p className="text-4xl mb-3">🚧</p>
+      <h2 className="text-lg font-black text-gray-800 mb-1">Coming Soon</h2>
+      <p className="text-xs text-gray-400 mb-5">This unit is under development.<br/>Currently active: <span className="font-bold text-orange-500">Woven</span></p>
+      <button onClick={() => setShowComingSoon(false)}
+        className="w-full text-white py-3 rounded-xl font-bold text-sm"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f, #1e40af)' }}>
+        Got it
+      </button>
+    </div>
+  </div>
+)}
     </>
   )
 }
